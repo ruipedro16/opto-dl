@@ -22,3 +22,7 @@ def download_file(url: str, output_path: str = None, max_retries=3, multiplier=1
 
     output_path = output_path or url.split("/")[-1]
     logger.info("Starting download from URL: %s", url)
+
+
+def cleanup():
+    pass

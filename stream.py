@@ -38,8 +38,8 @@ def get_streams(manifest) -> tuple[list[Representation], list[Representation]]:
     video_streams: list[Representation] = [
         s
         for adaptation in period.adaptation_sets
-        if is_video_adaptation(adaptation)
         for s in adaptation.representations
+        if s not in audio_streams
     ]
 
     logger.info(f"Audio Streams: {[s.id for s in audio_streams]}")
@@ -70,14 +70,6 @@ def is_audio_codec(name: str) -> bool:
             "mha1",  # MPEG-H 3D Audio
         )
     )
-
-
-def is_subtitle_codec(c: str) -> bool:
-    return c in ("wvtt", "c608", "stpp", "tx3g") or c.startswith("stpp.")
-
-
-def is_subtitle_mimetype(mt: str) -> bool:
-    return mt in ("text/vtt", "application/ttml+xml", "application/x-sami")
 
 
 def is_audio_stream(s: Representation):
@@ -113,6 +105,9 @@ def choose_best_audio(audio_streams: list[Representation]) -> Representation:
     if not audio_streams:
         raise ValueError("No audio streams provided")
 
+    if all(is_audio_stream(s) for s in audio_streams):
+        logger.warning("Not all streams are audio")
+
     s = max(audio_streams, key=lambda s: s.bandwidth or 0)
 
     logger.info(f"Best audio: StreamID={s.id}, Bandwidth={s.bandwidth}")
@@ -120,5 +115,23 @@ def choose_best_audio(audio_streams: list[Representation]) -> Representation:
     return s
 
 
-def is_video_adaptation(a: AdaptationSet) -> bool:
-    pass
+def choose_best_video(video_streams: list[Representation]) -> Representation:
+    if not video_streams:
+        raise ValueError(f"No video streams provided: {video_streams}")
+
+    # if all(is_video_stream(s) for s in video_streams):
+    #    logger.warning("Not all streams are video")
+
+    s = max(video_streams, key=lambda s: s.width * s.height or 0)
+
+    logger.info(f"Best video: StreamID={s.id}, Resolution={s.height}x{s.width}")
+
+    return s
+
+
+def is_subtitle_codec(c: str) -> bool:
+    return c in ("wvtt", "c608", "stpp", "tx3g") or c.startswith("stpp.")
+
+
+def is_subtitle_mimetype(mt: str) -> bool:
+    return mt in ("text/vtt", "application/ttml+xml", "application/x-sami")

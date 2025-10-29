@@ -4,14 +4,16 @@ import shutil
 import sys
 
 import extractor
+import stream
 from stream import is_audio_stream
 
+
 try:
+    from mpegdash.parser import MPEGDASHParser
     from mpegdash.nodes import Representation
 except ImportError:
     sys.stderr.write("")  # TODO:
-    sys.exit(2)
-
+    sys.exit(1)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,6 +40,13 @@ def download_by_manifest_and_license_url(manifest: str, license_url: str):
     if license_url is None:
         raise ValueError()
 
+    mpd = MPEGDASHParser.parse(manifest)
+    audio_streams, video_streams = stream.get_streams(mpd)
+    best_audio = stream.choose_best_audio(audio_streams)
+    best_video = stream.choose_best_video(video_streams)
+    download_stream(manifest, best_video)
+    download_stream(manifest, best_audio)
+
     # TODO:
 
 
@@ -49,17 +58,21 @@ def download_stream(manifest_url: str, stream: Representation):
         raise ValueError()
 
     if not isinstance(manifest_url, str):
-        logger.warning(f"Invalid type for manifest_url: Expected str, got {type(s).__name__}")
+        logger.warning(
+            f"Invalid type for manifest_url: Expected str, got {type(manifest_url).__name__}"
+        )
 
     if not isinstance(stream, Representation):
-        logger.warning(f"Invalid type for stream: Expected Representation, got {type(s).__name__}")
+        logger.warning(
+            f"Invalid type for stream: Expected Representation, got {type(stream).__name__}"
+        )
 
     if shutil.which("yt-dlp") is None:
         logger.fatal("yt-dlp is not installed or not found in PATH")
         sys.stderr.write("yt-dlp is not installed or not found in PATH")
         sys.exit(1)
 
-    stream_type = "audio" if is_audio_stream(stream) else ""
+    stream_type = "audio" if is_audio_stream(stream) else "video" # if is_video_stream(stream) else ""
 
     logger.info(f"Downloading encrypted {stream_type} stream: {stream.id}")
 
@@ -68,3 +81,5 @@ def download_stream(manifest_url: str, stream: Representation):
     logger.info(f'Command: {" ".join(command)}')
 
     subprocess.run(command, capture_output=True, text=True, check=True)
+
+
