@@ -1,19 +1,25 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import argparse
 import pprint
 
-parser = argparse.ArgumentParser(
-    prog="opto-dl",
-    description="Download media from Opto"
+parser = argparse.ArgumentParser(prog="opto-dl", description="Download media from Opto")
+
+parser.add_argument(
+    "--url",
+    help="URL of the video (from https://opto.sic.pt/)",
 )
+
 
 parser.add_argument(
     "--manifest",
-    required=False,
     help="URL of the manifest",
 )
 
 parser.add_argument(
-    "-v", "--verbose",
+    "-v",
+    "--verbose",
     action="store_true",
     help="Enable verbose output",
 )
@@ -32,7 +38,7 @@ parser.add_argument(
 
 parser.add_argument(
     "--list-streams",
-    action="store_true",
+    type=str,
     help="List available streams",
 )
 
@@ -48,11 +54,13 @@ parser.add_argument(
 
 parser.add_argument(
     "--license-url",
+    type=str,
     help="License URL",
 )
 
 parser.add_argument(
-    "-o", "--output",
+    "-o",
+    "--output",
     help="Output file",
 )
 
