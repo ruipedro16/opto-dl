@@ -5,6 +5,14 @@ import time
 import json
 import os
 
+from collections import namedtuple
+
+
+try:
+    import requests
+except ImportError:
+    sys.stderr.write("Error: 'requests' is not installed. Install it with: pip install requests\n")
+    sys.exit(1)
 
 try:
     from selenium import webdriver
@@ -27,8 +35,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-logger = logging.getLogger(__name__)
+DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 
 
 def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]:
@@ -46,12 +53,13 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
                         f.write(f"{request_method} {request_url}\n")
                     elif method == "Network.responseReceived":
                         resp = message["params"]["response"]
+                        # TODO: Write the response as well
 
                 except Exception as e:
                     logger.warning(f"Error parsing log entry: {e}")
 
     if url is None:
-        raise ValueError()  # TODO: Message
+        raise ValueError("")  # TODO: Message
 
     logger.info("Configuring Chrome driver")
     options = Options()
@@ -72,7 +80,7 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
     driver.get(url)
 
     logger.info("Waiting for page to fully load...")
-    time.sleep(5)
+    time.sleep(10)
 
     logger.info("Fetching requests from browser...")
     logs = driver.get_log("performance")
@@ -106,3 +114,32 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
                 logger.info("Removed requests.txt")
         except Exception as e:
             logger.warning(f"Failed to remove requests.txt: {e}")
+
+
+def get_keys(pssh: str, license_url: str) -> list[DecryptionKeys]:
+    response = requests.post(
+        url="https://cdrm-project.com/api/decrypt",
+        headers={
+            "Content-Type": "application/json",
+        },
+        json={
+            "pssh": pssh,
+            "licurl": license_url,
+            "headers": str(
+                {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0",
+                    "Accept": "*/*",
+                    "Accept-Language": "en-US,en;q=0.7",
+                }
+            ),
+        },
+    )
+
+    response.raise_for_status()
+
+    text = response.json()["message"]
+
+    r = []
+    # TODO: log the answer logger.info("")
+    # TODO: Parse the answer
+    return r

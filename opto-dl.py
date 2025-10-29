@@ -3,6 +3,17 @@
 
 import argparse
 import pprint
+import sys
+
+import extractor
+import stream
+
+try:
+    from mpegdash.parser import MPEGDASHParser
+except ImportError:
+    sys.stderr.write("")  # TODO:
+    sys.exit(1)
+
 
 parser = argparse.ArgumentParser(prog="opto-dl", description="Download media from Opto")
 
@@ -68,3 +79,8 @@ args = parser.parse_args()
 
 if args.verbose:
     pprint.pprint(args)
+
+manifest, license_url = extractor.get_manifest_and_license(args.url)
+mpd = MPEGDASHParser.parse(manifest)
+audio_streams, video_streams = stream.get_streams(mpd)
+best_audio = stream.choose_best_audio(audio_streams)
