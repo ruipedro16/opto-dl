@@ -1,0 +1,5 @@
+#!/bin/env bash
+
+set -e
+
+black --line-length 100 *.py
