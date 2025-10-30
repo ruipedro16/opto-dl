@@ -7,6 +7,9 @@ import os
 
 from collections import namedtuple
 
+from selenium.webdriver.ie.webdriver import WebDriver
+
+from defaults import DEFAULT_TIMEOUT
 
 try:
     import requests
@@ -18,7 +21,6 @@ try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as ec
 except ImportError:
     sys.stderr.write("Error: 'selenium' is not installed. Install it with: pip install selenium\n")
@@ -38,8 +40,10 @@ logger = logging.getLogger(__name__)
 DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 
 
-def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]:
-    def log_requests():
+def get_manifest_and_license(
+    url: str, headless: bool = True, max_retries: int = 5
+) -> tuple[str, str]:
+    def log_requests(logs):
         with open(REQUESTS_FILE, "w", encoding="utf-8") as f:
             for log in logs:
                 try:
@@ -53,10 +57,32 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
                         f.write(f"{request_method} {request_url}\n")
                     elif method == "Network.responseReceived":
                         resp = message["params"]["response"]
-                        # TODO: Write the response as well
-
+                        f.write(f"{request_method} {resp}\n")
                 except Exception as e:
                     logger.warning(f"Error parsing log entry: {e}")
+
+    def visit_page(driver: WebDriver, page_url):
+        if driver is None:
+            raise ValueError("")
+
+        if url is None:
+            raise ValueError("URL must not be empty")
+
+        if not isinstance(page_url, str):
+            logger.warning(
+                f"Invalid type for page_url: Expected str, got {type(page_url).__name__}"
+            )
+
+        logger.info(f"Navigating to: {url}")
+        driver.get(url)
+
+        logger.info("Waiting for page to fully load...")
+        time.sleep(DEFAULT_TIMEOUT)
+
+        logger.info("Fetching requests from browser...")
+        logs = driver.get_log("performance")
+
+        log_requests(logs)
 
     if url is None:
         raise ValueError("")  # TODO: Message
@@ -70,53 +96,65 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
         options.add_argument("--headless=new")
 
     try:
-        driver = webdriver.Chrome(options=options)
+        driver: WebDriver = webdriver.Chrome(options=options)
         logger.info("Initialized Chrome WebDriver")
     except Exception as e:
         logger.error(f"Failed to initialize Chrome WebDriver: {e}")
         sys.exit(1)
 
-    logger.info(f"Navigating to: {url}")
-    driver.get(url)
+    manifest_url = None
+    license_url = None
 
-    logger.info("Waiting for page to fully load...")
-    time.sleep(15)
+    for attempt in range(1, max_retries + 1):
+        logger.info(f"Attempt {attempt}/{max_retries}...")
 
-    logger.info("Fetching requests from browser...")
-    logs = driver.get_log("performance")
+        try:
+            # This populates the requests file
+            visit_page(driver, url)
+
+            with open(REQUESTS_FILE, "r") as f:
+                req_text = f.read()
+
+            manifest_match = re.search(r"\b(?:GET|POST)\s+(https?://[^\s]+manifest\.mpd)", req_text)
+            license_match = re.search(r"\bPOST\s+(https://[^\s]*license\?[^\s]+)", req_text)
+
+            if manifest_match is not None:
+                manifest_url = manifest_match.group(1)
+                logger.info(f"Captured manifest URL: {manifest_url}")
+            else:
+                logger.warning("No manifest found")
+
+            if license_match is not None:
+                license_url = license_match.group(1)
+                logger.info(f"Captured License URL: {license_url}")
+            else:
+                logger.warning("No License URL found")
+
+            if manifest_url and license_url:
+                break  # Success
+
+        except Exception as e:
+            logger.warning(f"Error during attempt {attempt}: {e}")
+        finally:
+            try:
+                if os.path.exists("requests.txt"):
+                    os.remove("requests.txt")
+                    logger.info("Removed requests.txt")
+            except Exception as e:
+                logger.warning(f"Failed to remove requests.txt: {e}")
 
     driver.quit()
-    logger.info("Browser session closed successfully.")
+    logger.info("Browser session closed.")
 
-    try:
-        log_requests()
+    if not manifest_url or not license_url:
+        logger.fatal("Failed to capture both manifest and license URLs after retries.")
+        sys.exit(1)
 
-        with open(REQUESTS_FILE, "r") as f:
-            req_text = f.read()
-
-        if manifest := re.search(
-            r"\b(?:GET|POST)\s+(https?://[^\s]+manifest\.mpd)", req_text
-        ).group(1):
-            logger.info(f"Captured manifest URL: {manifest}")
-        else:
-            logger.warning("No manifest found")
-
-        if license_url := re.search(r"\bPOST\s+(https://[^\s]*license\?[^\s]+)", req_text).group(1):
-            logger.info(f"Captured License URL: {license_url}")
-        else:
-            logger.warning("No License URL found")
-
-        return manifest, license_url
-    finally:
-        try:
-            if os.path.exists("requests.txt"):
-                os.remove("requests.txt")
-                logger.info("Removed requests.txt")
-        except Exception as e:
-            logger.warning(f"Failed to remove requests.txt: {e}")
+    return manifest_url, license_url
 
 
-def get_keys(pssh: str, license_url: str) -> list[DecryptionKeys]:
+def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]:
+    # TODO: Implement retries. If no respose is ok, log.fatal and sys.exit(1)
     response = requests.post(
         url="https://cdrm-project.com/api/decrypt",
         headers={

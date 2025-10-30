@@ -2,4 +2,21 @@
 
 set -e
 
-black --line-length 100 *.py
+
+# Format python code
+if command -v black &> /dev/null; then
+  black --line-length 100 *.py
+else
+  echo "[Warning]: black not found, skipping Dockerfile formatting"
+fi
+
+# Format dockerfile
+if command -v nix-shell &> /dev/null; then
+  nix-shell -p dockerfmt --run "dockerfmt Dockerfile" > tmp
+  mv tmp Dockerfile
+else
+  echo "[Warning]: dockerfmt not found, skipping Dockerfile formatting"
+fi
+
+# Stage formatted files
+git add *.py Dockerfile

@@ -8,6 +8,12 @@ import subprocess
 import os
 import logging
 
+from defaults import (
+    DEFAULT_ENCRYPTED_VIDEO_FILENAME,
+    DEFAULT_ENCRYPTED_AUDIO_FILENAME,
+    DEFAULT_DECRYPTED_AUDIO_FILENAME,
+    DEFAULT_DECRYPTED_VIDEO_FILENAME,
+)
 from extractor import DecryptionKeys
 
 try:
@@ -174,7 +180,7 @@ def fix_audio(decryption_keys: list[DecryptionKeys]):
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
 
-    if not os.path.exists("manifest [manifest].m4a"):
+    if not os.path.exists(DEFAULT_ENCRYPTED_AUDIO_FILENAME):
         logger.fatal("Encrypted audio file does not exist")
         sys.exit(1)
 
@@ -182,9 +188,9 @@ def fix_audio(decryption_keys: list[DecryptionKeys]):
 
     cmd = ["mp4decrypt"]
     for key_id, key in decryption_keys:
-        cmd += ["--key", f"1:{key}:{key_id}"]
+        cmd += ["--key", f"1:{key_id}:{key}"]
 
-    cmd += ["manifest [manifest].m4a", "OK_audio.mp4"]
+    cmd += [DEFAULT_ENCRYPTED_AUDIO_FILENAME, DEFAULT_DECRYPTED_AUDIO_FILENAME]
 
     logger.info(f'Command: {" ".join(cmd)}')
 
@@ -196,7 +202,7 @@ def fix_video(decryption_keys: list[DecryptionKeys]):
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
 
-    if not os.path.exists("manifest [manifest].mp4"):
+    if not os.path.exists(DEFAULT_ENCRYPTED_VIDEO_FILENAME):
         logger.fatal("Encrypted video file does not exist")
         sys.exit(1)
 
@@ -204,15 +210,15 @@ def fix_video(decryption_keys: list[DecryptionKeys]):
 
     cmd = ["mp4decrypt"]
     for key_id, key in decryption_keys:
-        cmd += ["--key", f"1:{key}:{key_id}"]
+        cmd += ["--key", f"1:{key_id}:{key}"]
 
-    cmd += ["manifest [manifest].mp4", "OK_video.mp4"]
+    cmd += [DEFAULT_ENCRYPTED_VIDEO_FILENAME, DEFAULT_DECRYPTED_VIDEO_FILENAME]
 
     logger.info(f'Command: {" ".join(cmd)}')
     subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
-def merge_streams(output_filename = None):
+def merge_streams(output_filename=None):
     if shutil.which("ffmpeg") is None:
         logger.fatal("ffmpeg is not installed or not found in PATH")
         sys.exit(1)
@@ -222,6 +228,15 @@ def merge_streams(output_filename = None):
 
     logger.info("Merging (decrypted) audio and video streams")
 
-    cmd = ["ffmpeg", "-i", "OK_video.mp4", "-i", "OK_audio.m4a", "-c", "copy", output_filename]
+    cmd = [
+        "ffmpeg",
+        "-i",
+        DEFAULT_DECRYPTED_VIDEO_FILENAME,
+        "-i",
+        DEFAULT_DECRYPTED_AUDIO_FILENAME,
+        "-c",
+        "copy",
+        output_filename,
+    ]
     logger.info(f'Command: {" ".join(cmd)}')
     subprocess.run(cmd, capture_output=True, text=True, check=True)
