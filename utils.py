@@ -1,4 +1,5 @@
 import sys
+import os
 import logging
 
 try:
@@ -25,4 +26,14 @@ def download_file(url: str, output_path: str = None, max_retries=3, multiplier=1
 
 
 def cleanup():
-    pass
+    files_to_delete = ["manifest [manifest].m4a", "manifest [manifest].mp4"]
+
+    for file in files_to_delete:
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+                logger.info(f"Deleted: {file}")
+            except Exception as e:
+                logger.error(f"Failed to delete {file}: {e}")
+        else:
+            logger.warning(f"File not found: {file}")

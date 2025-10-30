@@ -2,12 +2,16 @@
 The function for checking if a stream is video or audio are based on https://github.com/emarsden/dash-mpd-rs
 """
 
+import shutil
 import sys
+import subprocess
+import os
 import logging
 
+from extractor import DecryptionKeys
 
 try:
-    from mpegdash.nodes import AdaptationSet, Period, Representation
+    from mpegdash.nodes import AdaptationSet, Representation
 except ImportError:
     sys.stderr.write("")  # TODO: MEssage
     sys.exit(1)
@@ -135,3 +139,89 @@ def is_subtitle_codec(c: str) -> bool:
 
 def is_subtitle_mimetype(mt: str) -> bool:
     return mt in ("text/vtt", "application/ttml+xml", "application/x-sami")
+
+
+def get_pssh(stream: Representation) -> str:
+    if stream is None:
+        raise ValueError("")
+
+    if not isinstance(stream, Representation):
+        logger.warning(
+            f"Invalid type for stream: Expected Representation, got {type(stream).__name__}"
+        )
+
+    # We only care about elements that have the field pssh
+    pssh_list = [p for p in stream.content_protections if p.pssh is not None]
+
+    if len(pssh_list) != 1:
+        logger.fatal("Not implemented for len(pssh_list) != 1")
+        sys.exit(1)
+
+    pssh = pssh_list[0].pssh
+
+    if len(pssh) != 1:
+        logger.fatal("Not implemented for len(pssh) != 1")
+        sys.exit(1)
+
+    p = pssh[0].pssh
+
+    logger.info(f"Found PSSH: {p}")
+    return p
+
+
+def fix_audio(decryption_keys: list[DecryptionKeys]):
+    if shutil.which("mp4decrypt") is None:
+        logger.fatal("mp4decrypt is not installed or not found in PATH")
+        sys.exit(1)
+
+    if not os.path.exists("manifest [manifest].m4a"):
+        logger.fatal("Encrypted audio file does not exist")
+        sys.exit(1)
+
+    logger.info("Decrypting audio stream")
+
+    cmd = ["mp4decrypt"]
+    for key_id, key in decryption_keys:
+        cmd += ["--key", f"1:{key}:{key_id}"]
+
+    cmd += ["manifest [manifest].m4a", "OK_audio.mp4"]
+
+    logger.info(f'Command: {" ".join(cmd)}')
+
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+
+def fix_video(decryption_keys: list[DecryptionKeys]):
+    if shutil.which("mp4decrypt") is None:
+        logger.fatal("mp4decrypt is not installed or not found in PATH")
+        sys.exit(1)
+
+    if not os.path.exists("manifest [manifest].mp4"):
+        logger.fatal("Encrypted video file does not exist")
+        sys.exit(1)
+
+    logger.info("Decrypting video stream")
+
+    cmd = ["mp4decrypt"]
+    for key_id, key in decryption_keys:
+        cmd += ["--key", f"1:{key}:{key_id}"]
+
+    cmd += ["manifest [manifest].mp4", "OK_video.mp4"]
+
+    logger.info(f'Command: {" ".join(cmd)}')
+    subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+
+def merge_streams(output_filename = None):
+    if shutil.which("ffmpeg") is None:
+        logger.fatal("ffmpeg is not installed or not found in PATH")
+        sys.exit(1)
+
+    if output_filename is None:
+        output_filename = "Ficheiro_Final.mp4"
+
+    logger.info("Merging (decrypted) audio and video streams")
+
+    cmd = ["ffmpeg", "-i", "OK_video.mp4", "-i", "OK_audio.m4a", "-c", "copy", output_filename]
+    logger.info(f'Command: {" ".join(cmd)}')
+    subprocess.run(cmd, capture_output=True, text=True, check=True)

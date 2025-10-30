@@ -5,8 +5,8 @@ import sys
 
 import extractor
 import stream
-from stream import is_audio_stream
-
+from stream import is_audio_stream, get_pssh, fix_video, fix_audio, merge_streams
+from extractor import get_keys
 
 try:
     from mpegdash.parser import MPEGDASHParser
@@ -24,21 +24,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def download_by_url(url: str):
+def download_by_url(url: str, output_filename: str=None):
     if url is None:
         raise ValueError()
 
     manifest, license_url = extractor.get_manifest_and_license(url)
 
-    download_by_manifest_and_license_url(manifest, license_url)
+    download_by_manifest_and_license_url(manifest, license_url, output_filename)
 
 
-def download_by_manifest_and_license_url(manifest: str, license_url: str):
+def download_by_manifest_and_license_url(manifest: str, license_url: str, output_filename: str=None):
     if manifest is None:
-        raise ValueError()
+        raise ValueError("")
+
+    if not isinstance(manifest, str):
+        logger.fatal("")
+        sys.exit(1)
 
     if license_url is None:
         raise ValueError()
+
+    if not isinstance(license_url, str):
+        logger.fatal("")
+        sys.exit(1)
 
     mpd = MPEGDASHParser.parse(manifest)
     audio_streams, video_streams = stream.get_streams(mpd)
@@ -46,8 +54,11 @@ def download_by_manifest_and_license_url(manifest: str, license_url: str):
     best_video = stream.choose_best_video(video_streams)
     download_stream(manifest, best_video)
     download_stream(manifest, best_audio)
-
-    # TODO:
+    pssh = get_pssh(best_video)
+    decryption_keys = get_keys(pssh, license_url)
+    fix_video(decryption_keys)
+    fix_audio(decryption_keys)
+    merge_streams(output_filename)
 
 
 def download_stream(manifest_url: str, stream: Representation):
@@ -69,10 +80,11 @@ def download_stream(manifest_url: str, stream: Representation):
 
     if shutil.which("yt-dlp") is None:
         logger.fatal("yt-dlp is not installed or not found in PATH")
-        sys.stderr.write("yt-dlp is not installed or not found in PATH")
         sys.exit(1)
 
-    stream_type = "audio" if is_audio_stream(stream) else "video" # if is_video_stream(stream) else ""
+    stream_type = (
+        "audio" if is_audio_stream(stream) else "video"
+    )  # if is_video_stream(stream) else ""
 
     logger.info(f"Downloading encrypted {stream_type} stream: {stream.id}")
 
@@ -81,5 +93,3 @@ def download_stream(manifest_url: str, stream: Representation):
     logger.info(f'Command: {" ".join(command)}')
 
     subprocess.run(command, capture_output=True, text=True, check=True)
-
-

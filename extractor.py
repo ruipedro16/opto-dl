@@ -80,7 +80,7 @@ def get_manifest_and_license(url: str, headless: bool = True) -> tuple[str, str]
     driver.get(url)
 
     logger.info("Waiting for page to fully load...")
-    time.sleep(10)
+    time.sleep(15)
 
     logger.info("Fetching requests from browser...")
     logs = driver.get_log("performance")
@@ -137,9 +137,16 @@ def get_keys(pssh: str, license_url: str) -> list[DecryptionKeys]:
 
     response.raise_for_status()
 
-    text = response.json()["message"]
+    text: str = response.json()["message"]
 
-    r = []
-    # TODO: log the answer logger.info("")
-    # TODO: Parse the answer
+    r: list[DecryptionKeys] = []
+    for line in text.splitlines():
+        try:
+            key_id, key = line.split(":")
+            r.append(DecryptionKeys(key, key_id))
+            logger.info(f"Found Key: {key} ; KeyID: {key_id}")
+        except ValueError as e:
+            logger.error(f"Invalid line: {line} ==> {e}")
+            continue
+
     return r

@@ -2,10 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-import pprint
 
 import downloader
-import utils
 
 parser = argparse.ArgumentParser(prog="opto-dl", description="Download media from Opto")
 
@@ -14,17 +12,9 @@ parser.add_argument(
     help="URL of the video (from https://opto.sic.pt/)",
 )
 
-
 parser.add_argument(
     "--manifest",
     help="URL of the manifest",
-)
-
-parser.add_argument(
-    "-v",
-    "--verbose",
-    action="store_true",
-    help="Enable verbose output",
 )
 
 parser.add_argument(
@@ -69,16 +59,10 @@ parser.add_argument(
 
 args = parser.parse_args()
 
-if args.verbose:
-    pprint.pprint(args)
-
 try:
     if args.url is not None:
-        downloader.download_by_url(args.url)
+        downloader.download_by_url(args.url, args.output)
     elif args.manifest is not None and args.license_url is not None:
-        downloader.download_by_manifest_and_license_url(args.manifest, args.license_url)
-
-    if args.output:
-        pass
+        downloader.download_by_manifest_and_license_url(args.manifest, args.license_url, args.output)
 finally:
     utils.cleanup()
