@@ -1,6 +1,7 @@
 import sys
 import logging
 
+import utils
 from stream import Stream, StreamType
 
 try:
@@ -10,13 +11,7 @@ except ImportError:
     sys.stderr.write("Error: rich module not found. Install it with: pip install rich\n")
     sys.exit(1)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 
 def pp_streams(streams: list[Stream]):

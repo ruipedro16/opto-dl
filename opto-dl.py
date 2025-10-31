@@ -13,14 +13,6 @@ import pp
 import stream
 import utils
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
-
 parser = argparse.ArgumentParser(prog="opto-dl", description="Download media from Opto")
 
 parser.add_argument("-f", "--file", help="File with multiple URLs")

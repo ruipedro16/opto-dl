@@ -12,6 +12,7 @@ import logging
 from enum import Enum, auto
 from typing import Optional
 
+import utils
 from defaults import (
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
     DEFAULT_ENCRYPTED_AUDIO_FILENAME,
@@ -28,13 +29,7 @@ except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 
 class StreamType(Enum):

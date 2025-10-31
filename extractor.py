@@ -9,6 +9,7 @@ from collections import namedtuple
 
 from selenium.webdriver.ie.webdriver import WebDriver
 
+import utils
 from defaults import DEFAULT_TIMEOUT
 
 try:
@@ -29,13 +30,7 @@ except ImportError:
 # File to where the requests are logged
 REQUESTS_FILE = "requests.txt"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 

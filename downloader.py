@@ -8,6 +8,7 @@ from typing import Optional
 
 import extractor
 import stream
+import utils
 from defaults import DEFAULT_MAX_WORKERS
 from stream import (
     get_pssh,
@@ -28,13 +29,7 @@ except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 
 def download_by_file(
@@ -107,7 +102,7 @@ def download_by_url(
         raise ValueError()
 
     if not isinstance(url, str):
-        pass  # TODO: log actual type
+        logger.fatal("")
 
     if output_filename is not None and not isinstance(output_filename, str):
         logger.fatal(
@@ -244,5 +239,8 @@ def download_subtitles(subtitle_stream: Stream, output_path: str = None):
 
     for url in subtitle_stream.subtitle_urls:
         logger.info(f"Downloading subtitle URL {url} for stream {subtitle_stream.id}")
-        output_path = url.split("/")[-1]
-        download_file(url, output_path)
+        # TODO: Append this to output_path if it is a directory.
+        # TODO: Replace the extension if it is a file
+        o_path = url.split("/")[-1]
+        if not download_file(url, o_path):
+            logger.error(f"Failed to download subtitles for {url}")
