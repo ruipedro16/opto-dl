@@ -1,5 +1,6 @@
 """
-The function for checking if a stream is video or audio are based on https://github.com/emarsden/dash-mpd-rs
+The function for checking if a stream is video or audio are based on
+https://github.com/emarsden/dash-mpd-rs
 """
 
 import shutil
@@ -53,9 +54,6 @@ class StreamType(Enum):
 
 # A stream represents the same as a Representation
 class Stream:
-    id: str
-    stream_type: StreamType
-
     def __init__(
         self,
         stream_id: str,
@@ -64,8 +62,10 @@ class Stream:
         width: Optional[int],
         height: Optional[int],
         fps: Optional[int],
+        subtitle_urls: list[str],
         content_protections,
     ):
+        # TODO: Perform some sanity checks
         self.id: str = stream_id
         self.stream_type: StreamType = stream_type
 
@@ -76,6 +76,9 @@ class Stream:
         self.width: Optional[int] = width
         self.height: Optional[int] = height
         self.fps: Optional[int] = fps
+
+        # Subtitles
+        self.subtitle_urls: list[str] = subtitle_urls
 
         # for finding pssh
         self.content_protections = content_protections
@@ -88,8 +91,21 @@ class Stream:
         if not isinstance(r, Representation):
             logger.fatal(f"Invalid type for r: Expected Representation, got {type(r).__name__}")
 
+        subtitle_urls = (
+            [url.base_url_value for url in r.base_urls]
+            if stream_type == StreamType.SUBTITLES
+            else []
+        )
+
         instance = Stream(
-            r.id, stream_type, r.bandwidth, r.width, r.height, r.frame_rate, r.content_protections
+            r.id,
+            stream_type,
+            r.bandwidth,
+            r.width,
+            r.height,
+            r.frame_rate,
+            subtitle_urls,
+            r.content_protections,
         )
         return instance
 
@@ -122,8 +138,6 @@ def get_streams(manifest) -> list[Stream]:
         sys.exit(1)
 
     period = manifest.periods[0]
-
-    # TODO: Improve this
 
     audio_streams: list[Stream] = [
         Stream.from_representation(s, StreamType.AUDIO)

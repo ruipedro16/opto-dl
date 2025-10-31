@@ -43,11 +43,10 @@ parser.add_argument(
     help="Timeout in seconds",
 )
 
-# TODO: Use this
 parser.add_argument(
-    "--skip-subtitles",
+    "--download-subtitles",
     action="store_true",
-    help="Skip downloading subtitles",
+    help="Download subtitles",
 )
 
 parser.add_argument(
@@ -56,13 +55,11 @@ parser.add_argument(
     help="List available streams",
 )
 
-# TODO: Use this
 parser.add_argument(
     "--audio-stream",
     help="Audio stream ID",
 )
 
-# TODO: Use this
 parser.add_argument(
     "--video-stream",
     help="Video stream ID",
@@ -100,10 +97,17 @@ try:
     if args.file is not None:
         downloader.download_by_file(args.file)
     elif args.url is not None:
-        downloader.download_by_url(args.url, args.output)
+        downloader.download_by_url(
+            args.url, args.download_subtitles, args.output, args.audio_stream, args.video_stream
+        )
     if args.manifest is not None and args.license_url is not None:
         downloader.download_by_manifest_and_license_url(
-            args.manifest, args.license_url, args.output
+            args.manifest,
+            args.license_url,
+            args.download_subtitles,
+            args.audio_stream,
+            args.video_stream,
+            args.output,
         )
 finally:
     utils.cleanup()

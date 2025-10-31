@@ -1,21 +1,19 @@
-import sys
 import os
 import re
 import logging
+import time
 
+import requests
+import requests.exceptions
 
 from defaults import (
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
     DEFAULT_DECRYPTED_VIDEO_FILENAME,
     DEFAULT_DECRYPTED_AUDIO_FILENAME,
     DEFAULT_ENCRYPTED_AUDIO_FILENAME,
+    DEFAULT_TIMEOUT,
 )
 
-try:
-    import requests
-except ImportError:
-    sys.stderr.write("Error: 'requests' is not installed. Install it with: pip install requests\n")
-    sys.exit(1)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -38,11 +36,11 @@ def cleanup():
         if os.path.exists(file):
             try:
                 os.remove(file)
-                logger.info(f"Deleted: {file}")
+                logger.info("Deleted: {}".format(file))
             except Exception as e:
-                logger.error(f"Failed to delete {file}: {e}")
+                logger.error("Failed to delete {}: {}".format(file, e))
         else:
-            logger.warning(f"File not found: {file}")
+            logger.warning("File not found: {}".format(file))
 
 
 def get_urls(text: str) -> list[str]:
@@ -50,8 +48,49 @@ def get_urls(text: str) -> list[str]:
         raise ValueError("Input text cannot be None")
 
     if not isinstance(text, str):
-        logger.fatal(f"Invalid type for text: Expected str, got {type(text).__name__}")
+        logger.fatal("Invalid type for text: Expected str, got {}".format(type(text).__name__))
 
     url_pattern = re.compile(r"(https?://[^\s]+)", re.IGNORECASE)
 
     return url_pattern.findall(text)
+
+
+def download_file(
+    url: str,
+    output_path: str,
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> bool:
+    if not url:
+        raise ValueError("")
+
+    if not isinstance(url, str):
+        logger.fatal("")
+
+    for attempt in range(max_retries + 1):
+        try:
+            logger.info(f"Downloading {url} (attempt {attempt + 1}/{max_retries + 1})")
+
+            response = requests.get(url, timeout=timeout, stream=True)
+            response.raise_for_status()
+
+            with open(output_path, "wb") as f:
+                f.write(response.content)
+
+            logger.info(f"Successfully downloaded {url}")
+            return True
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Attempt {attempt + 1} failed: {e}")
+
+            if attempt < max_retries:
+                delay = initial_delay * (backoff_factor**attempt)
+                logger.info(f"Retrying in {delay:.1f} seconds...")
+                time.sleep(delay)
+            else:
+                logger.error(f"Failed to download {url} after {max_retries + 1} attempts")
+                return False
+
+    return False

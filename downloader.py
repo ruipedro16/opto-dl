@@ -1,4 +1,5 @@
 import logging
+import pprint
 import subprocess
 import shutil
 import sys
@@ -19,11 +20,10 @@ from stream import (
     StreamType,
     choose_best_audio,
 )
-from utils import get_urls, cleanup
+from utils import get_urls, cleanup, download_file
 
 try:
     from mpegdash.parser import MPEGDASHParser
-    from mpegdash.nodes import Representation
 except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
@@ -97,7 +97,11 @@ def download_by_file(
 
 
 def download_by_url(
-    url: str, output_filename: str = None, audio_stream_id: str = None, video_stream_id: str = None
+    url: str,
+    to_download_subtitles: bool,
+    output_filename: str = None,
+    audio_stream_id: str = None,
+    video_stream_id: str = None,
 ):
     if url is None:
         raise ValueError()
@@ -115,12 +119,20 @@ def download_by_url(
     if manifest is None or license_url is None:
         sys.exit(1)
 
-    download_by_manifest_and_license_url(manifest, license_url, output_filename)
+    download_by_manifest_and_license_url(
+        manifest,
+        license_url,
+        to_download_subtitles,
+        audio_stream_id,
+        video_stream_id,
+        output_filename,
+    )
 
 
 def download_by_manifest_and_license_url(
     manifest: str,
     license_url: str,
+    to_download_subtitles: bool,
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
     output_filename: str = None,
@@ -142,8 +154,17 @@ def download_by_manifest_and_license_url(
     mpd = MPEGDASHParser.parse(manifest)
     streams: list[Stream] = stream.get_streams(mpd)
 
+    subtitle_streams: list[Stream] = [s for s in streams if s.stream_type == StreamType.SUBTITLES]
+
+    if not subtitle_streams:
+        logger.info("No subtiles found")
+
+    if to_download_subtitles:
+        for subtitle_stream in subtitle_streams:
+            download_subtitles(subtitle_stream)
+
     if video_stream_id is not None:
-        logger.info(f"Video stream ID provided: {video_stream_id}")
+        logger.info("Video stream ID provided: {}".format(video_stream_id))
         video_stream: Optional[Stream] = get_stream_by_id(video_stream_id, streams)
 
         if video_stream is None:
@@ -152,7 +173,7 @@ def download_by_manifest_and_license_url(
     else:
         video_stream: Stream = choose_best_video(streams)
 
-    logger.info(f"Chosen video stream: {video_stream.id}")
+    logger.info("Chosen video stream: {}".format(video_stream.id))
 
     if audio_stream_id is not None:
         logger.info(f"Audio stream ID provided: {audio_stream_id}")
@@ -207,3 +228,21 @@ def download_stream(manifest_url: str, stream: Stream):
     logger.info(f'Command: {" ".join(command)}')
 
     subprocess.run(command, capture_output=True, text=True, check=True)
+
+
+def download_subtitles(subtitle_stream: Stream, output_path: str = None):
+    # TODO: Use the output path
+
+    if subtitle_stream is None:
+        raise ValueError("subtitle_stream cannot be None")
+
+    if not isinstance(subtitle_stream, Stream):
+        logger.fatal("")
+
+    if subtitle_stream.stream_type != StreamType.SUBTITLES:
+        logger.warning("")
+
+    for url in subtitle_stream.subtitle_urls:
+        logger.info(f"Downloading subtitle URL {url} for stream {subtitle_stream.id}")
+        output_path = url.split("/")[-1]
+        download_file(url, output_path)
