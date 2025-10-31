@@ -1,5 +1,3 @@
-import logging
-import pprint
 import subprocess
 import shutil
 import sys

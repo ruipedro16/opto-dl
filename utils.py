@@ -52,7 +52,7 @@ def get_urls(text: str) -> list[str]:
         raise ValueError("Input text cannot be None")
 
     if not isinstance(text, str):
-        logger.fatal("Invalid type for text: Expected str, got {}".format(type(text).__name__))
+        logger.fatal("Invalid type for text: Expected str, got %s", type(text).__name__)
 
     url_pattern = re.compile(r"(https?://[^\s]+)", re.IGNORECASE)
 

@@ -7,7 +7,6 @@ import shutil
 import sys
 import subprocess
 import os
-import logging
 
 from enum import Enum, auto
 from typing import Optional
@@ -84,7 +83,7 @@ class Stream:
             raise ValueError("")
 
         if not isinstance(r, Representation):
-            logger.fatal(f"Invalid type for r: Expected Representation, got {type(r).__name__}")
+            logger.fatal("Invalid type for r: Expected Representation, got %s", type(r).__name__)
 
         subtitle_urls = (
             [url.base_url_value for url in r.base_urls]
@@ -113,16 +112,16 @@ def get_stream_by_id(stream_id: str, streams: list[Stream]) -> Optional[Stream]:
         raise ValueError("streams cannot be None")
 
     if not isinstance(stream_id, str):
-        logger.fatal(f"Invalid type for stream_id: Expected str, got {type(stream_id).__name__}")
+        logger.fatal("Invalid type for stream_id: Expected str, got %s", type(stream_id).__name__)
 
     if not isinstance(streams, list):
-        logger.fatal(f"Invalid type for streams: Expected list, got {type(streams).__name__}")
+        logger.fatal("Invalid type for streams: Expected list, got %s", type(streams).__name__)
 
     if not all(isinstance(x, Stream) for x in streams):
         logger.fatal("all items in streams list must be Stream instances")
 
-    logger.info(f"Searching for stream with id: {stream_id}")
-    logger.info(f'Existing streams: {",".join(s.id for s in streams)}')
+    logger.info("Searching for stream with id: %s", stream_id)
+    logger.info("Existing streams: %s", ",".join(s.id for s in streams))
 
     return next((stream for stream in streams if stream.id == id), None)
 
@@ -167,6 +166,12 @@ def get_streams(manifest) -> list[Stream]:
 
 
 def is_audio_codec(name: str) -> bool:
+    if name is None:
+        raise ValueError("")
+
+    if not isinstance(name, str):
+        logger.fatal("")
+
     return name.startswith(
         (
             "mp4a",
@@ -191,18 +196,21 @@ def is_audio_codec(name: str) -> bool:
 
 
 def is_audio_stream(s: Representation):
-    if not s:
+    if s is None:
         raise ValueError()
 
     if not isinstance(s, Representation):
-        logger.warning(f"Invalid type: Expected Representation, got {type(s).__name__}")
+        logger.warning("Invalid type: Expected Representation, got %s", type(s).__name__)
 
     return s.mime_type and s.mime_type.startswith("audio/")
 
 
 def is_audio_adaptation(a: AdaptationSet) -> bool:
     if a is None:
-        return False
+        raise ValueError("")
+
+    if not isinstance(a, AdaptationSet):
+        logger.fatal("")
 
     if a.codecs is not None and is_audio_codec(a.codecs):
         return True
@@ -225,6 +233,8 @@ def choose_best_audio(streams: list[Stream]) -> Stream:
     if not streams:
         raise ValueError("No streams provided")
 
+    # TODO: all elements should be of type stream
+
     # we have to filter for audio streams because video streams also have a bandwidth field
 
     audio_streams = filter(lambda s: s.stream_type == StreamType.AUDIO, streams)
@@ -241,6 +251,8 @@ def choose_best_video(streams: list[Stream]) -> Stream:
     if not streams:
         raise ValueError(f"No streams provided: {streams}")
 
+    # TODO: all elements should be of type stream
+
     s = max(streams, key=lambda s: (s.width or 0) * (s.height or 0))
 
     logger.info(f"Best video: StreamID={s.id}, Resolution={s.height}x{s.width}")
@@ -249,14 +261,32 @@ def choose_best_video(streams: list[Stream]) -> Stream:
 
 
 def is_subtitle_codec(c: str) -> bool:
+    if c is None:
+        raise ValueError("")
+
+    if not isinstance(c, str):
+        logger.fatal("")
+
     return c in ("wvtt", "c608", "stpp", "tx3g") or c.startswith("stpp.")
 
 
 def is_subtitle_mimetype(mt: str) -> bool:
+    if mt is None:
+        raise ValueError("")
+
+    if not isinstance(mt, str):
+        logger.fatal("")
+
     return mt in ("text/vtt", "application/ttml+xml", "application/x-sami")
 
 
 def is_subtitle_adaptation(s: AdaptationSet) -> bool:
+    if s is None:
+        raise ValueError("")
+
+    if not isinstance(s, AdaptationSet):
+        logger.fatal("")
+
     if s.content_type == "text":
         return True
 
@@ -277,6 +307,12 @@ def is_subtitle_adaptation(s: AdaptationSet) -> bool:
 
 
 def is_video_adaptation(s: AdaptationSet) -> bool:
+    if s is None:
+        raise ValueError("")
+
+    if not isinstance(s, AdaptationSet):
+        logger.fatal("")
+
     if is_audio_adaptation(s) or is_subtitle_adaptation(s):
         return False
 
