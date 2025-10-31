@@ -3,8 +3,14 @@
 
 import argparse
 import logging
+import sys
+
+from mpegdash.parser import MPEGDASHParser
 
 import downloader
+import extractor
+import pp
+import stream
 import utils
 
 logging.basicConfig(
@@ -44,10 +50,9 @@ parser.add_argument(
     help="Skip downloading subtitles",
 )
 
-# TODO: Use this
 parser.add_argument(
     "--list-streams",
-    type=str,
+    action="store_true",
     help="List available streams",
 )
 
@@ -77,12 +82,26 @@ parser.add_argument(
 
 args = parser.parse_args()
 
+if args.list_streams:
+    if args.manifest is None and args.url is None:
+        sys.stderr.write("Must provide URL or manifest\n")
+        sys.exit(1)
+    elif args.manifest is not None:
+        manifest = args.manifest
+    elif args.url is not None:
+        manifest, _ = extractor.get_manifest_and_license(args.url)
+
+    mpd = MPEGDASHParser.parse(manifest)
+    streams = stream.get_streams(mpd)
+    pp.pp_streams(streams)
+    sys.exit(0)
+
 try:
     if args.file is not None:
         downloader.download_by_file(args.file)
-    if args.url is not None:
+    elif args.url is not None:
         downloader.download_by_url(args.url, args.output)
-    elif args.manifest is not None and args.license_url is not None:
+    if args.manifest is not None and args.license_url is not None:
         downloader.download_by_manifest_and_license_url(
             args.manifest, args.license_url, args.output
         )

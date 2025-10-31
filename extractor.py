@@ -154,7 +154,7 @@ def get_manifest_and_license(
 
 
 def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]:
-    # TODO: Implement retries. If no respose is ok, log.fatal and sys.exit(1)
+    # TODO: Implement retries. If no response is ok, log.fatal and sys.exit(1)
     response = requests.post(
         url="https://cdrm-project.com/api/decrypt",
         headers={

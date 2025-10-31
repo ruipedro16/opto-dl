@@ -3,20 +3,29 @@ import subprocess
 import shutil
 import sys
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Optional
 
 import extractor
 import stream
 from defaults import DEFAULT_MAX_WORKERS
-from stream import is_audio_stream, get_pssh, fix_video, fix_audio, merge_streams
-from extractor import get_keys
+from stream import (
+    get_pssh,
+    fix_video,
+    fix_audio,
+    merge_streams,
+    Stream,
+    get_stream_by_id,
+    choose_best_video,
+    StreamType,
+    choose_best_audio,
+)
 from utils import get_urls, cleanup
 
 try:
     from mpegdash.parser import MPEGDASHParser
     from mpegdash.nodes import Representation
 except ImportError:
-    sys.stderr.write("")  # TODO:
+    sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
 logging.basicConfig(
@@ -87,7 +96,9 @@ def download_by_file(
         """
 
 
-def download_by_url(url: str, output_filename: str = None):
+def download_by_url(
+    url: str, output_filename: str = None, audio_stream_id: str = None, video_stream_id: str = None
+):
     if url is None:
         raise ValueError()
 
@@ -108,7 +119,11 @@ def download_by_url(url: str, output_filename: str = None):
 
 
 def download_by_manifest_and_license_url(
-    manifest: str, license_url: str, output_filename: str = None
+    manifest: str,
+    license_url: str,
+    audio_stream_id: Optional[str] = None,
+    video_stream_id: Optional[str] = None,
+    output_filename: str = None,
 ):
     if manifest is None:
         raise ValueError("")
@@ -125,44 +140,67 @@ def download_by_manifest_and_license_url(
         sys.exit(1)
 
     mpd = MPEGDASHParser.parse(manifest)
-    audio_streams, video_streams = stream.get_streams(mpd)
-    best_audio = stream.choose_best_audio(audio_streams)
-    best_video = stream.choose_best_video(video_streams)
-    download_stream(manifest, best_video)
-    download_stream(manifest, best_audio)
-    pssh = get_pssh(best_video)
-    decryption_keys = get_keys(pssh, license_url)
+    streams: list[Stream] = stream.get_streams(mpd)
+
+    if video_stream_id is not None:
+        logger.info(f"Video stream ID provided: {video_stream_id}")
+        video_stream: Optional[Stream] = get_stream_by_id(video_stream_id, streams)
+
+        if video_stream is None:
+            sys.stderr.write(f"No video stream {video_stream_id} found\n")
+            sys.exit(1)
+    else:
+        video_stream: Stream = choose_best_video(streams)
+
+    logger.info(f"Chosen video stream: {video_stream.id}")
+
+    if audio_stream_id is not None:
+        logger.info(f"Audio stream ID provided: {audio_stream_id}")
+        audio_stream: Optional[Stream] = get_stream_by_id(audio_stream_id, streams)
+
+        if audio_stream is None:
+            sys.stderr.write(f"No audio stream {video_stream_id} found\n")
+            sys.exit(1)
+    else:
+        audio_stream: Stream = choose_best_audio(streams)
+
+    logger.info(f"Chosen audio stream: {audio_stream.id}")
+
+    if audio_stream.stream_type != StreamType.AUDIO:
+        logger.warning(f"Stream {audio_stream.id} is not audio")
+
+    if video_stream.stream_type != StreamType.VIDEO:
+        logger.warning(f"Stream {video_stream.id} is not video")
+
+    download_stream(manifest, video_stream)
+    download_stream(manifest, audio_stream)
+    pssh = get_pssh(video_stream)
+    decryption_keys = extractor.get_keys(pssh, license_url)
     fix_video(decryption_keys)
     fix_audio(decryption_keys)
     merge_streams(output_filename)
 
 
-def download_stream(manifest_url: str, stream: Representation):
-    if not manifest_url:
-        raise ValueError()
+def download_stream(manifest_url: str, stream: Stream):
+    if manifest_url is None:
+        raise ValueError("manifest_url cannot be empty or None")
 
-    if not stream:
-        raise ValueError()
+    if stream is None:
+        raise ValueError("stream cannot be empty or None")
 
     if not isinstance(manifest_url, str):
         logger.warning(
             f"Invalid type for manifest_url: Expected str, got {type(manifest_url).__name__}"
         )
 
-    if not isinstance(stream, Representation):
-        logger.warning(
-            f"Invalid type for stream: Expected Representation, got {type(stream).__name__}"
-        )
+    if not isinstance(stream, Stream):
+        logger.warning(f"Invalid type for stream: Expected Stream, got {type(stream).__name__}")
 
     if shutil.which("yt-dlp") is None:
         logger.fatal("yt-dlp is not installed or not found in PATH")
         sys.exit(1)
 
-    stream_type = (
-        "audio" if is_audio_stream(stream) else "video"
-    )  # if is_video_stream(stream) else ""
-
-    logger.info(f"Downloading encrypted {stream_type} stream: {stream.id}")
+    logger.info(f"Downloading encrypted {str(stream.stream_type)} stream: {stream.id}")
 
     command = ["yt-dlp", "-f", stream.id, "--allow-unplayable-formats", manifest_url]
 
