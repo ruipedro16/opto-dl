@@ -35,7 +35,7 @@ DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 
 
 def get_manifest_and_license(
-    url: str, headless: bool = True, max_retries: int = 5
+    url: str, headless: bool = True, max_retries: int = 5, timeout=None
 ) -> tuple[str, str]:
     def log_requests(logs):
         with open(REQUESTS_FILE, "w", encoding="utf-8") as f:
@@ -55,7 +55,7 @@ def get_manifest_and_license(
                 except Exception as e:
                     logger.warning(f"Error parsing log entry: {e}")
 
-    def visit_page(driver: WebDriver, page_url: str):
+    def visit_page(driver: WebDriver, page_url: str, timeout: int):
         if driver is None:
             raise ValueError("")
 
@@ -65,16 +65,21 @@ def get_manifest_and_license(
             raise ValueError("URL must not be empty")
 
         if not isinstance(page_url, str):
-            logger.warning(
-                "Invalid type for page_url: Expected str, got %s", type(page_url).__name__
-            )
+            logger.fatal("Invalid type for page_url: Expected str, got %s", type(page_url).__name__)
+
+        if timeout is None:
+            raise ValueError("")
+
+        if not isinstance(timeout, int):
+            logger.fatal("Invalid type for timeout: Expected int, got %s", type(page_url).__name__)
 
         # TODO: This should be page_url
         logger.info(f"Navigating to: {page_url}")
         driver.get(page_url)
 
-        logger.info("Waiting for page to fully load...")
-        time.sleep(DEFAULT_TIMEOUT)
+        logger.info("Waiting for page to fully load [timeout=%d]...", timeout)
+
+        time.sleep(timeout)
 
         logger.info("Fetching requests from browser...")
         logs = driver.get_log("performance")
@@ -86,6 +91,9 @@ def get_manifest_and_license(
 
     if not isinstance(url, str):
         logger.fatal("")
+
+    timeout = DEFAULT_TIMEOUT if timeout is None else timeout
+    assert type(timeout) == int
 
     logger.info("Configuring Chrome driver")
     options = Options()
@@ -112,7 +120,7 @@ def get_manifest_and_license(
 
         try:
             # This populates the requests file
-            visit_page(driver, url)
+            visit_page(driver, url, timeout)
 
             with open(REQUESTS_FILE, "r", encoding="utf-8") as f:
                 req_text = f.read()
@@ -135,6 +143,8 @@ def get_manifest_and_license(
             if manifest_url and license_url:
                 break  # Success
 
+            timeout *= 1.5  # TODO: this should be an argument
+            logger.info("Timeout increased to %d", timeout)
         except Exception as e:
             logger.warning(f"Error during attempt {attempt}: {e}")
         finally:
