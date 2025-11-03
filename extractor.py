@@ -1,5 +1,4 @@
 import sys
-import logging
 import re
 import time
 import json
@@ -9,6 +8,7 @@ from collections import namedtuple
 
 from selenium.webdriver.ie.webdriver import WebDriver
 
+import utils
 from defaults import DEFAULT_TIMEOUT
 
 try:
@@ -29,13 +29,7 @@ except ImportError:
 # File to where the requests are logged
 REQUESTS_FILE = "requests.txt"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 
@@ -61,20 +55,23 @@ def get_manifest_and_license(
                 except Exception as e:
                     logger.warning(f"Error parsing log entry: {e}")
 
-    def visit_page(driver: WebDriver, page_url):
+    def visit_page(driver: WebDriver, page_url: str):
         if driver is None:
             raise ValueError("")
+
+        # TODO: This should be page_url
 
         if url is None:
             raise ValueError("URL must not be empty")
 
         if not isinstance(page_url, str):
             logger.warning(
-                f"Invalid type for page_url: Expected str, got {type(page_url).__name__}"
+                "Invalid type for page_url: Expected str, got %s", type(page_url).__name__
             )
 
-        logger.info(f"Navigating to: {url}")
-        driver.get(url)
+        # TODO: This should be page_url
+        logger.info(f"Navigating to: {page_url}")
+        driver.get(page_url)
 
         logger.info("Waiting for page to fully load...")
         time.sleep(DEFAULT_TIMEOUT)
@@ -87,9 +84,14 @@ def get_manifest_and_license(
     if url is None:
         raise ValueError("")  # TODO: Message
 
+    if not isinstance(url, str):
+        logger.fatal("")
+
     logger.info("Configuring Chrome driver")
     options = Options()
     options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
 
     if headless:
@@ -106,13 +108,13 @@ def get_manifest_and_license(
     license_url = None
 
     for attempt in range(1, max_retries + 1):
-        logger.info(f"Attempt {attempt}/{max_retries}...")
+        logger.info(f"Attempt %d/%d...", attempt, max_retries)
 
         try:
             # This populates the requests file
             visit_page(driver, url)
 
-            with open(REQUESTS_FILE, "r") as f:
+            with open(REQUESTS_FILE, "r", encoding="utf-8") as f:
                 req_text = f.read()
 
             manifest_match = re.search(r"\b(?:GET|POST)\s+(https?://[^\s]+manifest\.mpd)", req_text)
@@ -120,13 +122,13 @@ def get_manifest_and_license(
 
             if manifest_match is not None:
                 manifest_url = manifest_match.group(1)
-                logger.info(f"Captured manifest URL: {manifest_url}")
+                logger.info("Captured manifest URL: %s", manifest_url)
             else:
                 logger.warning("No manifest found")
 
             if license_match is not None:
                 license_url = license_match.group(1)
-                logger.info(f"Captured License URL: {license_url}")
+                logger.info("Captured License URL: %s", license_url)
             else:
                 logger.warning("No License URL found")
 
@@ -182,7 +184,7 @@ def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]
         try:
             key_id, key = line.split(":")
             r.append(DecryptionKeys(key, key_id))
-            logger.info(f"Found Key: {key} ; KeyID: {key_id}")
+            logger.info("Found Key: %s ; KeyID: %s", key, key_id)
         except ValueError as e:
             logger.error(f"Invalid line: {line} ==> {e}")
             continue

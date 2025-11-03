@@ -15,13 +15,17 @@ from defaults import (
 )
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
+def configure_logger():
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
 
-logger = logging.getLogger(__name__)
+    return logging.getLogger(__name__)
+
+
+logger = configure_logger()
 
 
 def cleanup():
@@ -48,7 +52,7 @@ def get_urls(text: str) -> list[str]:
         raise ValueError("Input text cannot be None")
 
     if not isinstance(text, str):
-        logger.fatal("Invalid type for text: Expected str, got {}".format(type(text).__name__))
+        logger.fatal("Invalid type for text: Expected str, got %s", type(text).__name__)
 
     url_pattern = re.compile(r"(https?://[^\s]+)", re.IGNORECASE)
 

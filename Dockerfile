@@ -6,6 +6,8 @@ RUN apt-get update \
         ca-certificates \
         wget \
         unzip \
+        chromium \
+        chromium-driver \
     && rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install -U "yt-dlp[default]" requests

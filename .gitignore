@@ -1,3 +1,6 @@
 .venv
 .idea
 __pycache__
+
+*.mp4
+scripts/*.py

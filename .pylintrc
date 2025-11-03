@@ -449,7 +449,8 @@ disable=raw-checker-failed,
       
         logging-fstring-interpolation,
         missing-function-docstring,
-        missing-module-docstring
+        missing-module-docstring,
+        missing-class-docstring
 
 
 # Enable the message, report, category or checker with the given id(s). You can

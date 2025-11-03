@@ -1,14 +1,15 @@
-import logging
-import pprint
 import subprocess
 import shutil
 import sys
 import os
+
 from typing import Optional
 
 import extractor
 import stream
+import utils
 from defaults import DEFAULT_MAX_WORKERS
+
 from stream import (
     get_pssh,
     fix_video,
@@ -22,19 +23,14 @@ from stream import (
 )
 from utils import get_urls, cleanup, download_file
 
+
 try:
     from mpegdash.parser import MPEGDASHParser
 except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
-logger = logging.getLogger(__name__)
+logger = utils.configure_logger()
 
 
 def download_by_file(
@@ -107,7 +103,7 @@ def download_by_url(
         raise ValueError()
 
     if not isinstance(url, str):
-        pass  # TODO: log actual type
+        logger.fatal("")
 
     if output_filename is not None and not isinstance(output_filename, str):
         logger.fatal(
@@ -164,7 +160,7 @@ def download_by_manifest_and_license_url(
             download_subtitles(subtitle_stream)
 
     if video_stream_id is not None:
-        logger.info("Video stream ID provided: {}".format(video_stream_id))
+        logger.info("Video stream ID provided: %s", video_stream_id)
         video_stream: Optional[Stream] = get_stream_by_id(video_stream_id, streams)
 
         if video_stream is None:
@@ -173,10 +169,10 @@ def download_by_manifest_and_license_url(
     else:
         video_stream: Stream = choose_best_video(streams)
 
-    logger.info("Chosen video stream: {}".format(video_stream.id))
+    logger.info("Chosen video stream: %s", video_stream.id)
 
     if audio_stream_id is not None:
-        logger.info(f"Audio stream ID provided: {audio_stream_id}")
+        logger.info("Audio stream ID provided: %s", audio_stream_id)
         audio_stream: Optional[Stream] = get_stream_by_id(audio_stream_id, streams)
 
         if audio_stream is None:
@@ -244,5 +240,8 @@ def download_subtitles(subtitle_stream: Stream, output_path: str = None):
 
     for url in subtitle_stream.subtitle_urls:
         logger.info(f"Downloading subtitle URL {url} for stream {subtitle_stream.id}")
-        output_path = url.split("/")[-1]
-        download_file(url, output_path)
+        # TODO: Append this to output_path if it is a directory.
+        # TODO: Replace the extension if it is a file
+        o_path = url.split("/")[-1]
+        if not download_file(url, o_path):
+            logger.error(f"Failed to download subtitles for {url}")
