@@ -6,6 +6,8 @@ import time
 import requests
 import requests.exceptions
 
+from pathlib import Path
+
 from defaults import (
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
     DEFAULT_DECRYPTED_VIDEO_FILENAME,
@@ -37,14 +39,15 @@ def cleanup():
     ]
 
     for file in files_to_delete:
+        filepath = Path(file)
         if os.path.exists(file):
             try:
                 os.remove(file)
-                logger.info("Deleted: {}".format(file))
+                logger.info("Deleted: {}".format(filepath.resolve()))
             except Exception as e:
-                logger.error("Failed to delete {}: {}".format(file, e))
+                logger.error("Failed to delete {}: {}".format(filepath.resolve(), e))
         else:
-            logger.warning("File not found: {}".format(file))
+            logger.warning("File not found: {}".format(filepath.resolve()))
 
 
 def get_urls(text: str) -> list[str]:
@@ -71,7 +74,7 @@ def download_file(
         raise ValueError("")
 
     if not isinstance(url, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")
 
     for attempt in range(max_retries + 1):
         try:

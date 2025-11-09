@@ -20,4 +20,7 @@ fi
 
 
 # Stage formatted files
-git add *.py Dockerfile
+STAGED_PYTHON_FILES=$(git diff --name-only --cached --relative | grep '\.py$')
+if [ -n "$STAGED_PYTHON_FILES" ]; then
+  echo "$STAGED_PYTHON_FILES" | xargs git add
+fi

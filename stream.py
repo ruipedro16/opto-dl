@@ -83,7 +83,7 @@ class Stream:
             raise ValueError("")
 
         if not isinstance(r, Representation):
-            logger.fatal("Invalid type for r: Expected Representation, got %s", type(r).__name__)
+            logger.fatal(f"Invalid type for r: Expected Representation, got {type(r).__name__}")
 
         subtitle_urls = (
             [url.base_url_value for url in r.base_urls]
@@ -170,7 +170,7 @@ def is_audio_codec(name: str) -> bool:
         raise ValueError("")
 
     if not isinstance(name, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for name: Expected str, got {type(name).__name__}")
 
     return name.startswith(
         (
@@ -210,7 +210,7 @@ def is_audio_adaptation(a: AdaptationSet) -> bool:
         raise ValueError("")
 
     if not isinstance(a, AdaptationSet):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for a: Expected AdaptationSet, got {type(a).__name__}")
 
     if a.codecs is not None and is_audio_codec(a.codecs):
         return True
@@ -265,7 +265,7 @@ def is_subtitle_codec(c: str) -> bool:
         raise ValueError("")
 
     if not isinstance(c, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for c: Expected str, got {type(c).__name__}")
 
     return c in ("wvtt", "c608", "stpp", "tx3g") or c.startswith("stpp.")
 
@@ -275,7 +275,7 @@ def is_subtitle_mimetype(mt: str) -> bool:
         raise ValueError("")
 
     if not isinstance(mt, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for mt: Expected str, got {type(mt).__name__}")
 
     return mt in ("text/vtt", "application/ttml+xml", "application/x-sami")
 
@@ -285,7 +285,7 @@ def is_subtitle_adaptation(s: AdaptationSet) -> bool:
         raise ValueError("")
 
     if not isinstance(s, AdaptationSet):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for s: Expected AdaptationSet, got {type(s).__name__}")
 
     if s.content_type == "text":
         return True
@@ -311,7 +311,7 @@ def is_video_adaptation(s: AdaptationSet) -> bool:
         raise ValueError("")
 
     if not isinstance(s, AdaptationSet):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for s: Expected AdaptationSet, got {type(s).__name__}")
 
     if is_audio_adaptation(s) or is_subtitle_adaptation(s):
         return False

@@ -5,6 +5,7 @@ import json
 import os
 
 from collections import namedtuple
+from pathlib import Path
 
 from selenium.webdriver.ie.webdriver import WebDriver
 
@@ -27,7 +28,7 @@ except ImportError:
     sys.exit(1)
 
 # File to where the requests are logged
-REQUESTS_FILE = "requests.txt"
+REQUESTS_FILE: Path = Path.cwd() / "requests.txt"
 
 logger = utils.configure_logger()
 
@@ -65,15 +66,22 @@ def get_manifest_and_license(
             raise ValueError("URL must not be empty")
 
         if not isinstance(page_url, str):
-            logger.fatal("Invalid type for page_url: Expected str, got %s", type(page_url).__name__)
+            logger.fatal(f"Invalid type for page_url: Expected str, got {type(page_url).__name__}")
 
         if timeout is None:
             raise ValueError("")
 
-        if not isinstance(timeout, int):
-            logger.fatal("Invalid type for timeout: Expected int, got %s", type(page_url).__name__)
+        if isinstance(timeout, str):
+            logger.fatal(f"Invalid type for timeout: Expected int, got {type(timeout).__name__}")
+            logger.info("Converting timeout from str to int")
+            try:
+                timeout = int(timeout)
+            except ValueError:
+                logger.fatal("Failed to convert timeout to int")
 
-        # TODO: This should be page_url
+        if not isinstance(timeout, int) and not isinstance(timeout, str):
+            logger.fatal(f"Invalid type for timeout: Expected int, got {type(timeout).__name__}")
+
         logger.info(f"Navigating to: {page_url}")
         driver.get(page_url)
 
@@ -90,9 +98,9 @@ def get_manifest_and_license(
         raise ValueError("")  # TODO: Message
 
     if not isinstance(url, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")
 
-    timeout = DEFAULT_TIMEOUT if timeout is None else timeout
+    timeout = timeout or DEFAULT_TIMEOUT
     assert type(timeout) == int
 
     logger.info("Configuring Chrome driver")
@@ -149,11 +157,11 @@ def get_manifest_and_license(
             logger.warning(f"Error during attempt {attempt}: {e}")
         finally:
             try:
-                if os.path.exists("requests.txt"):
-                    os.remove("requests.txt")
-                    logger.info("Removed requests.txt")
+                if os.path.exists(REQUESTS_FILE):
+                    os.remove(REQUESTS_FILE)
+                    logger.info("Removed %s", Path(REQUESTS_FILE).resolve())
             except Exception as e:
-                logger.warning(f"Failed to remove requests.txt: {e}")
+                logger.warning(f"Failed to remove %s: {e}", Path(REQUESTS_FILE).resolve())
 
     driver.quit()
     logger.info("Browser session closed.")

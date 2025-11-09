@@ -103,7 +103,7 @@ def download_by_url(
         raise ValueError()
 
     if not isinstance(url, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")
 
     if output_filename is not None and not isinstance(output_filename, str):
         logger.fatal(
@@ -137,14 +137,16 @@ def download_by_manifest_and_license_url(
         raise ValueError("")
 
     if not isinstance(manifest, str):
-        logger.fatal("")
+        logger.fatal(f"Invalid type for manifest: Expected str, got {type(manifest).__name__}")
         sys.exit(1)
 
     if license_url is None:
         raise ValueError()
 
     if not isinstance(license_url, str):
-        logger.fatal("")
+        logger.fatal(
+            f"Invalid type for license_url: Expected str, got {type(license_url).__name__}"
+        )
         sys.exit(1)
 
     mpd = MPEGDASHParser.parse(manifest)
@@ -233,10 +235,12 @@ def download_subtitles(subtitle_stream: Stream, output_path: str = None):
         raise ValueError("subtitle_stream cannot be None")
 
     if not isinstance(subtitle_stream, Stream):
-        logger.fatal("")
+        logger.fatal(
+            f"Invalid type for subtitle_stream: Expected Stream, got {type(subtitle_stream).__name__}"
+        )
 
     if subtitle_stream.stream_type != StreamType.SUBTITLES:
-        logger.warning("")
+        logger.warning(f"Stream {subtitle_stream.id} is not a subtitle stream")
 
     for url in subtitle_stream.subtitle_urls:
         logger.info(f"Downloading subtitle URL {url} for stream {subtitle_stream.id}")
