@@ -403,7 +403,7 @@ def fix_video(decryption_keys: list[DecryptionKeys]):
     subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
-def merge_streams(output_filename: str = None):
+def merge_streams(output_filename: Optional[str] = None):
     if shutil.which("ffmpeg") is None:
         logger.fatal("ffmpeg is not installed or not found in PATH")
         sys.exit(1)

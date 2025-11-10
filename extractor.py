@@ -10,7 +10,6 @@ from pathlib import Path
 
 from selenium.webdriver.ie.webdriver import WebDriver
 
-import utils
 from defaults import DEFAULT_TIMEOUT
 
 try:
@@ -22,8 +21,6 @@ except ImportError:
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support import expected_conditions as ec
 except ImportError:
     sys.stderr.write("Error: 'selenium' is not installed. Install it with: pip install selenium\n")
     sys.exit(1)
@@ -53,6 +50,7 @@ def get_manifest_and_license(
                         f.write(f"{request_method} {request_url}\n")
                     elif method == "Network.responseReceived":
                         resp = message["params"]["response"]
+                        request_method = resp.get("method", "UNKNOWN")
                         f.write(f"{request_method} {resp}\n")
                 except Exception as e:
                     logger.warning(f"Error parsing log entry: {e}")
@@ -61,9 +59,7 @@ def get_manifest_and_license(
         if driver is None:
             raise ValueError("")
 
-        # TODO: This should be page_url
-
-        if url is None:
+        if page_url is None:
             raise ValueError("URL must not be empty")
 
         if not isinstance(page_url, str):

@@ -8,7 +8,6 @@ from typing import Optional
 
 import extractor
 import stream
-import utils
 from defaults import DEFAULT_MAX_WORKERS
 
 from stream import (
@@ -64,7 +63,9 @@ def download_by_file(
                 continue
 
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
-            download_by_url(url, f"file_{counter}.mp4")
+            download_by_url(
+                url, False, f"file_{counter}.mp4"
+            )  # TODO: FIXME: Here the False stands for not downloading subtitle. TODO: Get this from the context (not implemented yet)
             counter += 1
             cleanup()
     else:
@@ -97,9 +98,9 @@ def download_by_file(
 def download_by_url(
     url: str,
     to_download_subtitles: bool,
-    output_filename: str = None,
-    audio_stream_id: str = None,
-    video_stream_id: str = None,
+    output_filename: Optional[str] = None,
+    audio_stream_id: Optional[str] = None,
+    video_stream_id: Optional[str] = None,
 ):
     if url is None:
         raise ValueError()
@@ -133,7 +134,7 @@ def download_by_manifest_and_license_url(
     to_download_subtitles: bool,
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
-    output_filename: str = None,
+    output_filename: Optional[str] = None,
 ):
     if manifest is None:
         raise ValueError("")
@@ -230,7 +231,7 @@ def download_stream(manifest_url: str, stream: Stream):
     subprocess.run(command, capture_output=True, text=True, check=True)
 
 
-def download_subtitles(subtitle_stream: Stream, output_path: str = None):
+def download_subtitles(subtitle_stream: Stream, output_path: Optional[str] = None):
     # TODO: Use the output path
 
     if subtitle_stream is None:
