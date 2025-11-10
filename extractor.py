@@ -174,37 +174,57 @@ def get_manifest_and_license(
 
 
 def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]:
-    # TODO: Implement retries. If no response is ok, log.fatal and sys.exit(1)
-    response = requests.post(
-        url="https://cdrm-project.com/api/decrypt",
-        headers={
-            "Content-Type": "application/json",
-        },
-        json={
-            "pssh": pssh,
-            "licurl": license_url,
-            "headers": str(
-                {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0",
-                    "Accept": "*/*",
-                    "Accept-Language": "en-US,en;q=0.7",
-                }
-            ),
-        },
-    )
-
-    response.raise_for_status()
-
-    text: str = response.json()["message"]
-
-    r: list[DecryptionKeys] = []
-    for line in text.splitlines():
+    for attempt in range(1, max_retries + 1):
         try:
-            key_id, key = line.split(":")
-            r.append(DecryptionKeys(key, key_id))
-            logger.info("Found Key: %s ; KeyID: %s", key, key_id)
-        except ValueError as e:
-            logger.error(f"Invalid line: {line} ==> {e}")
-            continue
+            logger.info(f"Attempt %d/%d to get decryption keys...", attempt, max_retries)
+            response = requests.post(
+                url="https://cdrm-project.com/api/decrypt",
+                headers={
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "pssh": pssh,
+                    "licurl": license_url,
+                    "headers": str(
+                        {
+                            "User-Agent": (
+                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) "
+                                "Gecko/20100101 Firefox/134.0"
+                            ),
+                            "Accept": "*/*",
+                            "Accept-Language": "en-US,en;q=0.7",
+                        }
+                    ),
+                },
+                timeout=5,
+            )
 
-    return r
+            response.raise_for_status()
+
+            text: str = response.json()["message"]
+
+            r: list[DecryptionKeys] = []
+            for line in text.splitlines():
+                try:
+                    key_id, key = line.split(":")
+                    r.append(DecryptionKeys(key, key_id))
+                    logger.info(f"Found Key: {key} ; KeyID: {key_id}")
+                except ValueError as e:
+                    logger.error(f"Invalid line during key parsing: {line} => {e}")
+                    continue
+            return r
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"Network or HTTP error during attempt {attempt}: {e}")
+            time.sleep(2**attempt)  # Exponential backoff
+        except json.JSONDecodeError as e:
+            logger.warning(f"JSON decoding error during attempt {attempt}: {e}")
+            time.sleep(2**attempt)
+        except KeyError as e:
+            logger.warning(f"Key error in response during attempt {attempt}: {e}")
+            time.sleep(2**attempt)
+        except Exception as e:
+            logger.warning(f"Unexpected error during attempt {attempt}: {e}")
+            time.sleep(2**attempt)
+
+    logger.fatal("Failed to get decryption keys after multiple retries.")
+    sys.exit(1)
