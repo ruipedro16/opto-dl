@@ -11,7 +11,8 @@ except ImportError:
     sys.stderr.write("Error: rich module not found. Install it with: pip install rich\n")
     sys.exit(1)
 
-logger = utils.configure_logger()
+
+logger = logging.getLogger(__name__)
 
 
 def pp_streams(streams: list[Stream]):

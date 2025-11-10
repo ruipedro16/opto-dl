@@ -1,3 +1,5 @@
+import logging
+
 """
 The function for checking if a stream is video or audio are based on
 https://github.com/emarsden/dash-mpd-rs
@@ -11,7 +13,6 @@ import os
 from enum import Enum, auto
 from typing import Optional
 
-import utils
 from defaults import (
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
     DEFAULT_ENCRYPTED_AUDIO_FILENAME,
@@ -28,7 +29,8 @@ except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
-logger = utils.configure_logger()
+
+logger = logging.getLogger(__name__)
 
 
 class StreamType(Enum):

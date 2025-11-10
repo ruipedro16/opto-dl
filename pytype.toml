@@ -1,0 +1,22 @@
+[tool.pytype]
+
+python_version = "3.12"
+
+inputs = [
+    "defaults.py",
+    "downloader.py",
+    "extractor.py",
+    "opto-dl.py",
+    "pp.py",
+    "stream.py",
+    "utils.py",
+]
+
+output = ".pytype"
+jobs = 4
+platform = 'linux'
+pythonpath = '.'
+keep_going = true
+
+# Opt-in: Do not allow Any as a return type.
+no_return_any = false

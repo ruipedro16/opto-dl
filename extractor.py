@@ -1,3 +1,4 @@
+import logging
 import sys
 import re
 import time
@@ -30,7 +31,7 @@ except ImportError:
 # File to where the requests are logged
 REQUESTS_FILE: Path = Path.cwd() / "requests.txt"
 
-logger = utils.configure_logger()
+logger = logging.getLogger(__name__)
 
 DecryptionKeys = namedtuple("DecryptionKeys", ["Key", "KeyId"])
 

@@ -69,6 +69,13 @@ def parse_cli_args():
         help="Output file",
     )
 
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Verbose output",
+    )
+
     return parser.parse_args()
 
 
@@ -119,6 +126,7 @@ def run(args):
 if __name__ == "__main__":
     try:
         args = parse_cli_args()
+        utils.setup_logging(args.verbose)
         run(args)
     except KeyboardInterrupt:
         sys.stderr.write("Download interrupted by user\n")

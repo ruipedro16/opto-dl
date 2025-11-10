@@ -17,17 +17,15 @@ from defaults import (
 )
 
 
-def configure_logger():
+def setup_logging(verbose: bool = False):
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG if verbose else logging.WARNING,
         format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    return logging.getLogger(__name__)
 
-
-logger = configure_logger()
+logger = logging.getLogger(__name__)
 
 
 def cleanup():

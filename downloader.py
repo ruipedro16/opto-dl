@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import shutil
 import sys
@@ -30,7 +31,8 @@ except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
-logger = utils.configure_logger()
+
+logger = logging.getLogger(__name__)
 
 
 def download_by_file(
