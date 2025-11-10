@@ -1,26 +1,51 @@
-#!/bin/env bash
+#!/usr/bin/env bash
 
 set -e
 
-
-# Format python code
+# Format Python files
 if command -v black &> /dev/null; then
-  black --line-length 100 *.py
+  STAGED_PYTHON_FILES=$(git diff --name-only --cached --diff-filter=ACM | grep '\.py$' || true)
+
+  if [ -n "$STAGED_PYTHON_FILES" ]; then
+    echo "Formatting staged Python files..."
+
+    echo "$STAGED_PYTHON_FILES" | xargs -r black --line-length 100
+
+    # Re-stage the formatted files
+    echo "$STAGED_PYTHON_FILES" | xargs -r git add
+
+    echo "Staged Python files formatted and re-staged."
+  else
+    echo "No Python files staged for formatting."
+  fi
 else
-  echo "[Warning]: black not found, skipping Dockerfile formatting"
+  echo "[Warning]: black not found, skipping Python formatting."
 fi
 
-# Format dockerfile
+# Format Dockerfile(s)
 if command -v nix-shell &> /dev/null; then
-  nix-shell -p dockerfmt --run "dockerfmt Dockerfile" > tmp
-  mv tmp Dockerfile
+  STAGED_DOCKERFILES=$(git diff --name-only --cached --diff-filter=ACM | grep -E 'Dockerfile' || true)
+
+  if [ -n "$STAGED_DOCKERFILES" ]; then
+    echo "Formatting staged Dockerfile(s)..."
+
+    echo "$STAGED_DOCKERFILES" | while IFS= read -r dockerfile; do
+      [ -z "$dockerfile" ] && continue
+
+      TMP_FILE=$(mktemp)
+      echo "Formatting $dockerfile..."
+      if nix-shell -p dockerfmt --run "dockerfmt '$dockerfile'" > "$TMP_FILE"; then
+        mv "$TMP_FILE" "$dockerfile"
+        git add "$dockerfile"
+      else
+        rm -f "$TMP_FILE"
+        echo "[Error]: Failed to format $dockerfile" >&2
+        exit 1
+      fi
+    done
+
+    echo "Staged Dockerfile(s) formatted and re-staged."
+  fi
 else
-  echo "[Warning]: dockerfmt not found, skipping Dockerfile formatting"
-fi
-
-
-# Stage formatted files
-STAGED_PYTHON_FILES=$(git diff --name-only --cached --relative | grep '\.py$')
-if [ -n "$STAGED_PYTHON_FILES" ]; then
-  echo "$STAGED_PYTHON_FILES" | xargs git add
+  echo "[Warning]: nix-shell not found, skipping Dockerfile formatting."
 fi

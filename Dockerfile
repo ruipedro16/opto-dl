@@ -6,16 +6,52 @@ RUN apt-get update \
         ca-certificates \
         wget \
         unzip \
-        chromium \
-        chromium-driver \
+        jq \
+        libglib2.0-0 \
+        libnss3 \
+        libgdk-pixbuf2.0-0 \
+        libgtk-3-0 \
+        libx11-6 \
+        libx11-xcb1 \
+        libxcb1 \
+        libxcomposite1 \
+        libxcursor1 \
+        libxdamage1 \
+        libxext6 \
+        libxfixes3 \
+        libxi6 \
+        libxrandr2 \
+        libxrender1 \
+        libxss1 \
+        libxtst6 \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libdbus-1-3 \
+        libatspi2.0-0 \
+        libdrm2 \
+        libgbm1 \
+        libasound2 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN python3 -m pip install -U "yt-dlp[default]" requests
+# Install Google Chrome and ChromeDriver
+RUN JSON_DATA=$(wget -q -O - "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json") \
+    && CHROME_URL=$(echo "${JSON_DATA}" | jq -r '.channels.Stable.downloads.chrome[] | select(.platform=="linux64") | .url') \
+    && CHROMEDRIVER_URL=$(echo "${JSON_DATA}" | jq -r '.channels.Stable.downloads.chromedriver[] | select(.platform=="linux64") | .url') \
+    && wget -q "${CHROME_URL}" -O chrome-linux64.zip \
+    && wget -q "${CHROMEDRIVER_URL}" -O chromedriver-linux64.zip \
+    && unzip chrome-linux64.zip \
+    && unzip chromedriver-linux64.zip \
+    && mv chrome-linux64 /opt/chrome \
+    && mv chromedriver-linux64/chromedriver /usr/local/bin/chromedriver \
+    && rm chrome-linux64.zip chromedriver-linux64.zip
 
 RUN wget https://www.bok.net/Bento4/binaries/Bento4-SDK-1-6-0-641.x86_64-unknown-linux.zip \
     && unzip Bento4-SDK-1-6-0-641.x86_64-unknown-linux.zip \
     && cp Bento4-SDK-1-6-0-641.x86_64-unknown-linux/bin/mp4decrypt /usr/local/bin/mp4decrypt \
     && rm -rf Bento4-SDK-1-6-0-641.x86_64-unknown-linux.zip Bento4-SDK-1-6-0-641.x86_64-unknown-linux/
+
+RUN python3 -m pip install -U "yt-dlp[default]" requests
 
 WORKDIR /app
 
