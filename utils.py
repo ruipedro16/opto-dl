@@ -19,7 +19,7 @@ from defaults import (
 
 def setup_logging(verbose: bool = False):
     logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.WARNING,
+        level=logging.INFO if verbose else logging.WARNING,
         format="%(asctime)s [%(levelname)s] [%(module)s.%(funcName)s:%(lineno)d] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
