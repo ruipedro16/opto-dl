@@ -45,6 +45,12 @@ def parse_cli_args():
     )
 
     parser.add_argument(
+        "--store-manifest",
+        action="store_true",
+        help="Download subtitles",
+    )
+
+    parser.add_argument(
         "--list-streams",
         action="store_true",
         help="List available streams",
@@ -82,9 +88,10 @@ def parse_cli_args():
     return parser.parse_args()
 
 
-def run(args):
-    if args.output:
+def run(args: argparse.Namespace):
+    print(f"Args: {args}")
 
+    if args.output:
         if (
             not args.output.endswith("/")  # is a directory
             and Path(args.output).suffix not in VIDEO_EXTENSIONS
@@ -120,6 +127,7 @@ def run(args):
                 downloader.download_by_url(
                     args.url,
                     args.download_subtitles,
+                    args.store_manifest,
                     args.output,
                     args.audio_stream,
                     args.video_stream,
@@ -129,6 +137,7 @@ def run(args):
                     args.manifest,
                     args.license_url,
                     args.download_subtitles,
+                    args.store_manifest,
                     args.audio_stream,
                     args.video_stream,
                     args.output,

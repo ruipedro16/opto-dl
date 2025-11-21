@@ -98,6 +98,7 @@ def download_by_file(
 def download_by_url(
     url: str,
     to_download_subtitles: bool,
+    to_download_manifest: bool,
     output_filename: Optional[str] = None,
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
@@ -122,6 +123,7 @@ def download_by_url(
         manifest,
         license_url,
         to_download_subtitles,
+        to_download_manifest,
         audio_stream_id,
         video_stream_id,
         output_filename,
@@ -132,6 +134,7 @@ def download_by_manifest_and_license_url(
     manifest: str,
     license_url: str,
     to_download_subtitles: bool,
+    to_download_manifest: bool,
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
     output_filename: Optional[str] = None,
@@ -153,6 +156,11 @@ def download_by_manifest_and_license_url(
         sys.exit(1)
 
     mpd = MPEGDASHParser.parse(manifest)
+
+    if to_download_manifest:
+        download_file(manifest, "manifest.mpd")
+        logger.info(f"Saving manifest to manifest.mpd")
+
     streams: list[Stream] = stream.get_streams(mpd)
 
     subtitle_streams: list[Stream] = [s for s in streams if s.stream_type == StreamType.SUBTITLES]

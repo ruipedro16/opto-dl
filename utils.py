@@ -62,7 +62,7 @@ def get_urls(text: str) -> list[str]:
 
 def download_file(
     url: str,
-    output_path: str,
+    output_path: str,  # TODO: FIXME: Replace str with Path
     max_retries: int = 3,
     initial_delay: float = 1.0,
     backoff_factor: float = 2.0,
