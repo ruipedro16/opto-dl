@@ -4,6 +4,7 @@
 import argparse
 import sys
 
+from pathlib import Path
 from mpegdash.parser import MPEGDASHParser
 
 import downloader
@@ -11,6 +12,8 @@ import extractor
 import pp
 import stream
 import utils
+
+from defaults import VIDEO_EXTENSIONS
 
 
 def parse_cli_args():
@@ -80,6 +83,17 @@ def parse_cli_args():
 
 
 def run(args):
+    if args.output:
+
+        if (
+            not args.output.endswith("/")  # is a directory
+            and Path(args.output).suffix not in VIDEO_EXTENSIONS
+        ):
+            sys.stderr.write(
+                f"Output file must have a valid video extension: {', '.join(VIDEO_EXTENSIONS)}\n"
+            )
+            sys.exit(1)
+
     if args.list_streams:
         if args.manifest is None and args.url is None:
             sys.stderr.write("Must provide URL or manifest\n")
