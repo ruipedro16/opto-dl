@@ -143,7 +143,7 @@ def run(args: argparse.Namespace):
                     args.output,
                 )
         finally:
-            utils.cleanup()
+            pass  # Cleanup handled by temp directory context manager
 
 
 if __name__ == "__main__":
@@ -153,5 +153,5 @@ if __name__ == "__main__":
         run(args)
     except KeyboardInterrupt:
         sys.stderr.write("Download interrupted by user\n")
-        utils.cleanup()
+        # Cleanup handled by temp directory context manager
         sys.exit(0)

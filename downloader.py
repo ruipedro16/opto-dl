@@ -3,7 +3,9 @@ import subprocess
 import shutil
 import sys
 import os
+import tempfile
 
+from pathlib import Path
 from typing import Optional
 
 import extractor
@@ -67,7 +69,6 @@ def download_by_file(
                 url, False, False, f"file_{counter}.mp4"
             )  # TODO: FIXME: Here the False stands for not downloading subtitle and the manifest file. TODO: Get this from the context (not implemented yet)
             counter += 1
-            cleanup()
     else:
         raise NotImplementedError("")
         """
@@ -155,63 +156,69 @@ def download_by_manifest_and_license_url(
         )
         sys.exit(1)
 
-    mpd = MPEGDASHParser.parse(manifest)
+    with tempfile.TemporaryDirectory(prefix="opto-dl-") as temp_dir:
+        working_dir = Path(temp_dir)
+        logger.info(f"Using temporary directory: {working_dir}")
 
-    if to_download_manifest:
-        download_file(manifest, "manifest.mpd")
-        logger.info(f"Saving manifest to manifest.mpd")
+        mpd = MPEGDASHParser.parse(manifest)
 
-    streams: list[Stream] = stream.get_streams(mpd)
+        if to_download_manifest:
+            download_file(manifest, "manifest.mpd")
+            logger.info(f"Saving manifest to manifest.mpd")
 
-    subtitle_streams: list[Stream] = [s for s in streams if s.stream_type == StreamType.SUBTITLES]
+        streams: list[Stream] = stream.get_streams(mpd)
 
-    if not subtitle_streams:
-        logger.info("No subtiles found")
+        subtitle_streams: list[Stream] = [
+            s for s in streams if s.stream_type == StreamType.SUBTITLES
+        ]
 
-    if to_download_subtitles:
-        for subtitle_stream in subtitle_streams:
-            download_subtitles(subtitle_stream)
+        if not subtitle_streams:
+            logger.info("No subtiles found")
 
-    if video_stream_id is not None:
-        logger.info("Video stream ID provided: %s", video_stream_id)
-        video_stream: Optional[Stream] = get_stream_by_id(video_stream_id, streams)
+        if to_download_subtitles:
+            for subtitle_stream in subtitle_streams:
+                download_subtitles(subtitle_stream)
 
-        if video_stream is None:
-            sys.stderr.write(f"No video stream {video_stream_id} found\n")
-            sys.exit(1)
-    else:
-        video_stream: Stream = choose_best_video(streams)
+        if video_stream_id is not None:
+            logger.info("Video stream ID provided: %s", video_stream_id)
+            video_stream: Optional[Stream] = get_stream_by_id(video_stream_id, streams)
 
-    logger.info("Chosen video stream: %s", video_stream.id)
+            if video_stream is None:
+                sys.stderr.write(f"No video stream {video_stream_id} found\n")
+                sys.exit(1)
+        else:
+            video_stream: Stream = choose_best_video(streams)
 
-    if audio_stream_id is not None:
-        logger.info("Audio stream ID provided: %s", audio_stream_id)
-        audio_stream: Optional[Stream] = get_stream_by_id(audio_stream_id, streams)
+        logger.info("Chosen video stream: %s", video_stream.id)
 
-        if audio_stream is None:
-            sys.stderr.write(f"No audio stream {video_stream_id} found\n")
-            sys.exit(1)
-    else:
-        audio_stream: Stream = choose_best_audio(streams)
+        if audio_stream_id is not None:
+            logger.info("Audio stream ID provided: %s", audio_stream_id)
+            audio_stream: Optional[Stream] = get_stream_by_id(audio_stream_id, streams)
 
-    logger.info(f"Chosen audio stream: {audio_stream.id}")
+            if audio_stream is None:
+                sys.stderr.write(f"No audio stream {video_stream_id} found\n")
+                sys.exit(1)
+        else:
+            audio_stream: Stream = choose_best_audio(streams)
 
-    if audio_stream.stream_type != StreamType.AUDIO:
-        logger.warning(f"Stream {audio_stream.id} is not audio")
+        logger.info(f"Chosen audio stream: {audio_stream.id}")
 
-    if video_stream.stream_type != StreamType.VIDEO:
-        logger.warning(f"Stream {video_stream.id} is not video")
+        if audio_stream.stream_type != StreamType.AUDIO:
+            logger.warning(f"Stream {audio_stream.id} is not audio")
 
-    download_stream(manifest, video_stream)
-    download_stream(manifest, audio_stream)
-    pssh = get_pssh(video_stream)
-    decryption_keys = extractor.get_keys(pssh, license_url)
-    fix_video(decryption_keys)
-    fix_audio(decryption_keys)
-    merge_streams(output_filename)
+        if video_stream.stream_type != StreamType.VIDEO:
+            logger.warning(f"Stream {video_stream.id} is not video")
+
+        download_stream(manifest, video_stream, working_dir)
+        download_stream(manifest, audio_stream, working_dir)
+        pssh = get_pssh(video_stream)
+        decryption_keys = extractor.get_keys(pssh, license_url)
+        fix_video(decryption_keys, working_dir)
+        fix_audio(decryption_keys, working_dir)
+        merge_streams(output_filename, working_dir)
 
 
-def download_stream(manifest_url: str, stream: Stream):
+def download_stream(manifest_url: str, stream: Stream, working_dir: Optional[Path] = None):
     if manifest_url is None:
         raise ValueError("manifest_url cannot be empty or None")
 
@@ -230,13 +237,16 @@ def download_stream(manifest_url: str, stream: Stream):
         logger.fatal("yt-dlp is not installed or not found in PATH")
         sys.exit(1)
 
+    if working_dir is None:
+        working_dir = Path.cwd()
+
     logger.info(f"Downloading encrypted {str(stream.stream_type)} stream: {stream.id}")
 
     command = ["yt-dlp", "-f", stream.id, "--allow-unplayable-formats", manifest_url]
 
     logger.info(f'Command: {" ".join(command)}')
 
-    subprocess.run(command, capture_output=True, text=True, check=True)
+    subprocess.run(command, capture_output=True, text=True, check=True, cwd=str(working_dir))
 
 
 def download_subtitles(subtitle_stream: Stream, output_path: Optional[str] = None):

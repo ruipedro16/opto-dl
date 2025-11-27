@@ -11,6 +11,7 @@ import subprocess
 import os
 
 from enum import Enum, auto
+from pathlib import Path
 from typing import Optional
 
 from defaults import (
@@ -360,12 +361,18 @@ def get_pssh(stream: Stream) -> str:
     return p
 
 
-def fix_audio(decryption_keys: list[DecryptionKeys]):
+def fix_audio(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
 
-    if not os.path.exists(DEFAULT_ENCRYPTED_AUDIO_FILENAME):
+    if working_dir is None:
+        working_dir = Path.cwd()
+
+    encrypted_audio = working_dir / DEFAULT_ENCRYPTED_AUDIO_FILENAME
+    decrypted_audio = working_dir / DEFAULT_DECRYPTED_AUDIO_FILENAME
+
+    if not encrypted_audio.exists():
         logger.fatal("Encrypted audio file does not exist")
         sys.exit(1)
 
@@ -375,19 +382,25 @@ def fix_audio(decryption_keys: list[DecryptionKeys]):
     for key_id, key in decryption_keys:
         cmd += ["--key", f"1:{key_id}:{key}"]
 
-    cmd += [DEFAULT_ENCRYPTED_AUDIO_FILENAME, DEFAULT_DECRYPTED_AUDIO_FILENAME]
+    cmd += [str(encrypted_audio), str(decrypted_audio)]
 
     logger.info(f'Command: {" ".join(cmd)}')
 
     subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
-def fix_video(decryption_keys: list[DecryptionKeys]):
+def fix_video(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
 
-    if not os.path.exists(DEFAULT_ENCRYPTED_VIDEO_FILENAME):
+    if working_dir is None:
+        working_dir = Path.cwd()
+
+    encrypted_video = working_dir / DEFAULT_ENCRYPTED_VIDEO_FILENAME
+    decrypted_video = working_dir / DEFAULT_DECRYPTED_VIDEO_FILENAME
+
+    if not encrypted_video.exists():
         logger.fatal("Encrypted video file does not exist")
         sys.exit(1)
 
@@ -397,28 +410,34 @@ def fix_video(decryption_keys: list[DecryptionKeys]):
     for key_id, key in decryption_keys:
         cmd += ["--key", f"1:{key_id}:{key}"]
 
-    cmd += [DEFAULT_ENCRYPTED_VIDEO_FILENAME, DEFAULT_DECRYPTED_VIDEO_FILENAME]
+    cmd += [str(encrypted_video), str(decrypted_video)]
 
     logger.info(f'Command: {" ".join(cmd)}')
     subprocess.run(cmd, capture_output=True, text=True, check=True)
 
 
-def merge_streams(output_filename: Optional[str] = None):
+def merge_streams(output_filename: Optional[str] = None, working_dir: Optional[Path] = None):
     if shutil.which("ffmpeg") is None:
         logger.fatal("ffmpeg is not installed or not found in PATH")
         sys.exit(1)
 
+    if working_dir is None:
+        working_dir = Path.cwd()
+
     if output_filename is None:
         output_filename = DEFAULT_MERGED_VIDEO_FILENAME
+
+    decrypted_video = working_dir / DEFAULT_DECRYPTED_VIDEO_FILENAME
+    decrypted_audio = working_dir / DEFAULT_DECRYPTED_AUDIO_FILENAME
 
     logger.info("Merging (decrypted) audio and video streams")
 
     cmd = [
         "ffmpeg",
         "-i",
-        DEFAULT_DECRYPTED_VIDEO_FILENAME,
+        str(decrypted_video),
         "-i",
-        DEFAULT_DECRYPTED_AUDIO_FILENAME,
+        str(decrypted_audio),
         "-c",
         "copy",
         output_filename,

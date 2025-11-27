@@ -7,6 +7,7 @@ import requests
 import requests.exceptions
 
 from pathlib import Path
+from typing import Optional
 
 from defaults import (
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
@@ -28,7 +29,10 @@ def setup_logging(verbose: bool = False):
 logger = logging.getLogger(__name__)
 
 
-def cleanup():
+def cleanup(working_dir: Optional[Path] = None):
+    if working_dir is None:
+        working_dir = Path.cwd()
+
     files_to_delete = [
         DEFAULT_ENCRYPTED_AUDIO_FILENAME,
         DEFAULT_DECRYPTED_AUDIO_FILENAME,
@@ -36,11 +40,11 @@ def cleanup():
         DEFAULT_DECRYPTED_VIDEO_FILENAME,
     ]
 
-    for file in files_to_delete:
-        filepath = Path(file)
-        if os.path.exists(file):
+    for filename in files_to_delete:
+        filepath = working_dir / filename
+        if filepath.exists():
             try:
-                os.remove(file)
+                filepath.unlink()
                 logger.info("Deleted: {}".format(filepath.resolve()))
             except Exception as e:
                 logger.error("Failed to delete {}: {}".format(filepath.resolve(), e))
