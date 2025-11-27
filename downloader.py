@@ -64,8 +64,8 @@ def download_by_file(
 
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
             download_by_url(
-                url, False, f"file_{counter}.mp4"
-            )  # TODO: FIXME: Here the False stands for not downloading subtitle. TODO: Get this from the context (not implemented yet)
+                url, False, False, f"file_{counter}.mp4"
+            )  # TODO: FIXME: Here the False stands for not downloading subtitle and the manifest file. TODO: Get this from the context (not implemented yet)
             counter += 1
             cleanup()
     else:
