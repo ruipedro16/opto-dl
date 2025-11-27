@@ -11,9 +11,7 @@ A command-line tool for downloading DRM-protected video content from [opto.sic.p
 - Batch downloads from a file containing multiple URLs
 - List available streams before downloading
 
-## Requirements
-
-### Python Dependencies
+## Dependencies
 
 Install Python dependencies using:
 
@@ -21,44 +19,12 @@ Install Python dependencies using:
 pip install -r requirements.txt
 ```
 
-Required packages:
-- selenium
-- requests
-- mpegdash
-- rich
-- attrs, lxml, isodate (dependencies)
+The following tools must also be installed and available in your PATH:
 
-### External Tools
-
-The following tools must be installed and available in your PATH:
-
-1. **Chrome/Chromium Browser** - Required for extracting manifest and license URLs
-2. **yt-dlp** - For downloading DASH streams
-   ```bash
-   # Install via pip
-   pip install yt-dlp
-
-   # Or via package manager
-   sudo apt install yt-dlp  # Debian/Ubuntu
-   brew install yt-dlp      # macOS
-   ```
-
-3. **mp4decrypt** (from Bento4/mp4box) - For decrypting DRM-protected streams
-   ```bash
-   # Debian/Ubuntu
-   sudo apt install bento4
-
-   # macOS
-   brew install bento4
-
-   # Or download from: https://github.com/axiomatic-systems/Bento4
-   ```
-
-4. **ffmpeg** - For merging audio and video streams
-   ```bash
-   sudo apt install ffmpeg  # Debian/Ubuntu
-   brew install ffmpeg      # macOS
-   ```
+1. **Chrome/Chromium Browser**
+2. **yt-dlp**
+3. **mp4decrypt**
+4. **ffmpeg**
 
 ## Installation
 
@@ -99,6 +65,7 @@ docker run --rm -v "$(pwd):/output" -v "$(pwd)/urls.txt:/app/urls.txt" opto-dl -
 ```
 
 **Docker Notes:**
+
 - Use `-v "$(pwd):/output"` to mount the current directory for saving downloaded files
 - Output files must be written to `/output/` inside the container to persist on the host
 - The container runs as a non-root user (appuser) for security
@@ -184,43 +151,9 @@ python opto-dl.py -f urls.txt
 5. **Decrypt**: Decrypts video and audio streams using mp4decrypt
 6. **Merge**: Merges decrypted streams into a single file using ffmpeg
 
-## Project Structure
-
-```
-opto-dl/
-├── opto-dl.py       # Main entry point and CLI argument parsing
-├── extractor.py     # Manifest/license extraction and decryption key retrieval
-├── downloader.py    # Download orchestration logic
-├── stream.py        # Stream parsing, selection, and processing
-├── pp.py            # Pretty-printing streams in tables
-├── utils.py         # Utility functions (logging, file downloads)
-├── defaults.py      # Default configuration values
-└── requirements.txt # Python dependencies
-```
-
-## Development
-
-### Type Checking
-
-This project uses pytype for static type checking:
-
-```bash
-pytype
-```
-
-Configuration is in `pytype.toml`.
-
-### Pre-commit Hook
-
-A pre-commit hook is available in `scripts/pre-commit` for running type checks before commits.
-
 ## Notes
 
 - Using `--url` is less stable and slower than using `--manifest` and `--license-url` directly
 - The tool uses a temporary directory for intermediate files, which is automatically cleaned up
 - By default, the tool selects the highest quality video stream and the highest bandwidth audio stream
 - Chrome must be installed and accessible for the URL extraction feature to work
-
-## License
-
-This tool is for educational and personal use only. Respect content creators' rights and terms of service.
