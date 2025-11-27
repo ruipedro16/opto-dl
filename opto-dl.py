@@ -120,30 +120,27 @@ def run(args: argparse.Namespace):
         or args.url is not None
         or (args.license_url is not None and args.manifest is not None)
     ):
-        try:
-            if args.file is not None:
-                downloader.download_by_file(args.file)
-            elif args.url is not None:
-                downloader.download_by_url(
-                    args.url,
-                    args.download_subtitles,
-                    args.store_manifest,
-                    args.output,
-                    args.audio_stream,
-                    args.video_stream,
-                )
-            if args.manifest is not None and args.license_url is not None:
-                downloader.download_by_manifest_and_license_url(
-                    args.manifest,
-                    args.license_url,
-                    args.download_subtitles,
-                    args.store_manifest,
-                    args.audio_stream,
-                    args.video_stream,
-                    args.output,
-                )
-        finally:
-            pass  # Cleanup handled by temp directory context manager
+        if args.file is not None:
+            downloader.download_by_file(args.file)
+        elif args.url is not None:
+            downloader.download_by_url(
+                args.url,
+                args.download_subtitles,
+                args.store_manifest,
+                args.output,
+                args.audio_stream,
+                args.video_stream,
+            )
+        if args.manifest is not None and args.license_url is not None:
+            downloader.download_by_manifest_and_license_url(
+                args.manifest,
+                args.license_url,
+                args.download_subtitles,
+                args.store_manifest,
+                args.audio_stream,
+                args.video_stream,
+                args.output,
+            )
 
 
 if __name__ == "__main__":

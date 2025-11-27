@@ -1,4 +1,3 @@
-import os
 import re
 import logging
 import time
@@ -6,16 +5,7 @@ import time
 import requests
 import requests.exceptions
 
-from pathlib import Path
-from typing import Optional
-
-from defaults import (
-    DEFAULT_ENCRYPTED_VIDEO_FILENAME,
-    DEFAULT_DECRYPTED_VIDEO_FILENAME,
-    DEFAULT_DECRYPTED_AUDIO_FILENAME,
-    DEFAULT_ENCRYPTED_AUDIO_FILENAME,
-    DEFAULT_TIMEOUT,
-)
+from defaults import DEFAULT_TIMEOUT
 
 
 def setup_logging(verbose: bool = False):
@@ -27,29 +17,6 @@ def setup_logging(verbose: bool = False):
 
 
 logger = logging.getLogger(__name__)
-
-
-def cleanup(working_dir: Optional[Path] = None):
-    if working_dir is None:
-        working_dir = Path.cwd()
-
-    files_to_delete = [
-        DEFAULT_ENCRYPTED_AUDIO_FILENAME,
-        DEFAULT_DECRYPTED_AUDIO_FILENAME,
-        DEFAULT_ENCRYPTED_VIDEO_FILENAME,
-        DEFAULT_DECRYPTED_VIDEO_FILENAME,
-    ]
-
-    for filename in files_to_delete:
-        filepath = working_dir / filename
-        if filepath.exists():
-            try:
-                filepath.unlink()
-                logger.info("Deleted: {}".format(filepath.resolve()))
-            except Exception as e:
-                logger.error("Failed to delete {}: {}".format(filepath.resolve(), e))
-        else:
-            logger.warning("File not found: {}".format(filepath.resolve()))
 
 
 def get_urls(text: str) -> list[str]:
