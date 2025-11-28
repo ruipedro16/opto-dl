@@ -57,7 +57,7 @@ def get_manifest_and_license(
 
     def visit_page(driver: WebDriver, page_url: str, timeout: int):
         if driver is None:
-            raise ValueError("")
+            raise ValueError("driver cannot be None")
 
         if page_url is None:
             raise ValueError("URL must not be empty")
@@ -66,7 +66,7 @@ def get_manifest_and_license(
             logger.fatal(f"Invalid type for page_url: Expected str, got {type(page_url).__name__}")
 
         if timeout is None:
-            raise ValueError("")
+            raise ValueError("timeout cannot be None")
 
         if isinstance(timeout, str):
             logger.fatal(f"Invalid type for timeout: Expected int, got {type(timeout).__name__}")
@@ -92,13 +92,14 @@ def get_manifest_and_license(
         log_requests(logs)
 
     if url is None:
-        raise ValueError("")  # TODO: Message
+        raise ValueError("url cannot be None")
 
     if not isinstance(url, str):
         logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")
 
     timeout = timeout or DEFAULT_TIMEOUT
-    assert type(timeout) == int
+    if not isinstance(timeout, int):
+        raise TypeError(f"timeout must be int, got {type(timeout).__name__}")
 
     logger.info("Configuring Chrome driver")
     options = Options()

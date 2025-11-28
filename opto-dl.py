@@ -121,7 +121,11 @@ def run(args: argparse.Namespace):
         or (args.license_url is not None and args.manifest is not None)
     ):
         if args.file is not None:
-            downloader.download_by_file(args.file)
+            downloader.download_by_file(
+                args.file,
+                args.download_subtitles,
+                args.store_manifest,
+            )
         elif args.url is not None:
             downloader.download_by_url(
                 args.url,

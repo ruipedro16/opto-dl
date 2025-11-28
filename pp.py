@@ -1,7 +1,6 @@
 import sys
 import logging
 
-import utils
 from stream import Stream, StreamType
 
 try:

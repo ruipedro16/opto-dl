@@ -37,10 +37,14 @@ logger = logging.getLogger(__name__)
 
 
 def download_by_file(
-    filepath: str, multithreading: bool = False, workers: int = DEFAULT_MAX_WORKERS
+    filepath: str,
+    to_download_subtitles: bool = False,
+    to_download_manifest: bool = False,
+    multithreading: bool = False,
+    workers: int = DEFAULT_MAX_WORKERS,
 ):
     if filepath is None:
-        raise ValueError("")
+        raise ValueError("filepath cannot be None")
 
     if not isinstance(filepath, str):
         logger.fatal(f"Invalid type for filepath: Expected str, got {type(filepath).__name__}")
@@ -66,34 +70,14 @@ def download_by_file(
 
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
             download_by_url(
-                url, False, False, f"file_{counter}.mp4"
-            )  # TODO: FIXME: Here the False stands for not downloading subtitle and the manifest file. TODO: Get this from the context (not implemented yet)
+                url,
+                to_download_subtitles,
+                to_download_manifest,
+                f"file_{counter}.mp4",
+            )
             counter += 1
     else:
-        raise NotImplementedError("")
-        """
-        # TODO: Check that Url is valid
-        urls_with_counter = [(i + 1, url) for i, url in enumerate(urls)]
-
-        def download_task(counter: int, url: str):
-            logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
-            download_by_url(url, f"file_{counter}.mp4")
-            return counter, url
-
-        with ThreadPoolExecutor(max_workers=min(len(urls), workers)) as executor:
-            futures = {
-                executor.submit(download_task, counter, url): (counter, url)
-                for counter, url in urls_with_counter
-            }
-
-            for future in as_completed(futures):
-                counter, url = futures[future]
-                try:
-                    future.result()
-                    logger.info(f"Completed download {counter}/{len(urls)}")
-                except Exception as e:
-                    logger.error(f"Failed to download {url}: {e}")
-        """
+        raise NotImplementedError("Multithreading not yet implemented")
 
 
 def download_by_url(
@@ -105,7 +89,7 @@ def download_by_url(
     video_stream_id: Optional[str] = None,
 ):
     if url is None:
-        raise ValueError()
+        raise ValueError("url cannot be None")
 
     if not isinstance(url, str):
         logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")
@@ -141,14 +125,14 @@ def download_by_manifest_and_license_url(
     output_filename: Optional[str] = None,
 ):
     if manifest is None:
-        raise ValueError("")
+        raise ValueError("manifest cannot be None")
 
     if not isinstance(manifest, str):
         logger.fatal(f"Invalid type for manifest: Expected str, got {type(manifest).__name__}")
         sys.exit(1)
 
     if license_url is None:
-        raise ValueError()
+        raise ValueError("license_url cannot be None")
 
     if not isinstance(license_url, str):
         logger.fatal(

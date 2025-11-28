@@ -40,7 +40,7 @@ def download_file(
     timeout: int = DEFAULT_TIMEOUT,
 ) -> bool:
     if not url:
-        raise ValueError("")
+        raise ValueError("url cannot be empty")
 
     if not isinstance(url, str):
         logger.fatal(f"Invalid type for url: Expected str, got {type(url).__name__}")

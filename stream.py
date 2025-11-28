@@ -62,7 +62,6 @@ class Stream:
         subtitle_urls: list[str],
         content_protections,
     ):
-        # TODO: Perform some sanity checks
         self.id: str = stream_id
         self.stream_type: StreamType = stream_type
 
@@ -83,7 +82,7 @@ class Stream:
     @staticmethod
     def from_representation(r: Representation, stream_type: StreamType):
         if r is None:
-            raise ValueError("")
+            raise ValueError("representation cannot be None")
 
         if not isinstance(r, Representation):
             logger.fatal(f"Invalid type for r: Expected Representation, got {type(r).__name__}")
@@ -126,7 +125,7 @@ def get_stream_by_id(stream_id: str, streams: list[Stream]) -> Optional[Stream]:
     logger.info("Searching for stream with id: %s", stream_id)
     logger.info("Existing streams: %s", ",".join(s.id for s in streams))
 
-    return next((stream for stream in streams if stream.id == id), None)
+    return next((stream for stream in streams if stream.id == stream_id), None)
 
 
 def get_streams(manifest) -> list[Stream]:
@@ -170,7 +169,7 @@ def get_streams(manifest) -> list[Stream]:
 
 def is_audio_codec(name: str) -> bool:
     if name is None:
-        raise ValueError("")
+        raise ValueError("name cannot be None")
 
     if not isinstance(name, str):
         logger.fatal(f"Invalid type for name: Expected str, got {type(name).__name__}")
@@ -200,7 +199,7 @@ def is_audio_codec(name: str) -> bool:
 
 def is_audio_stream(s: Representation):
     if s is None:
-        raise ValueError()
+        raise ValueError("representation cannot be None")
 
     if not isinstance(s, Representation):
         logger.warning("Invalid type: Expected Representation, got %s", type(s).__name__)
@@ -210,7 +209,7 @@ def is_audio_stream(s: Representation):
 
 def is_audio_adaptation(a: AdaptationSet) -> bool:
     if a is None:
-        raise ValueError("")
+        raise ValueError("adaptation_set cannot be None")
 
     if not isinstance(a, AdaptationSet):
         logger.fatal(f"Invalid type for a: Expected AdaptationSet, got {type(a).__name__}")
@@ -265,7 +264,7 @@ def choose_best_video(streams: list[Stream]) -> Stream:
 
 def is_subtitle_codec(c: str) -> bool:
     if c is None:
-        raise ValueError("")
+        raise ValueError("codec cannot be None")
 
     if not isinstance(c, str):
         logger.fatal(f"Invalid type for c: Expected str, got {type(c).__name__}")
@@ -275,7 +274,7 @@ def is_subtitle_codec(c: str) -> bool:
 
 def is_subtitle_mimetype(mt: str) -> bool:
     if mt is None:
-        raise ValueError("")
+        raise ValueError("mimetype cannot be None")
 
     if not isinstance(mt, str):
         logger.fatal(f"Invalid type for mt: Expected str, got {type(mt).__name__}")
@@ -285,7 +284,7 @@ def is_subtitle_mimetype(mt: str) -> bool:
 
 def is_subtitle_adaptation(s: AdaptationSet) -> bool:
     if s is None:
-        raise ValueError("")
+        raise ValueError("adaptation_set cannot be None")
 
     if not isinstance(s, AdaptationSet):
         logger.fatal(f"Invalid type for s: Expected AdaptationSet, got {type(s).__name__}")
@@ -311,7 +310,7 @@ def is_subtitle_adaptation(s: AdaptationSet) -> bool:
 
 def is_video_adaptation(s: AdaptationSet) -> bool:
     if s is None:
-        raise ValueError("")
+        raise ValueError("adaptation_set cannot be None")
 
     if not isinstance(s, AdaptationSet):
         logger.fatal(f"Invalid type for s: Expected AdaptationSet, got {type(s).__name__}")
@@ -337,7 +336,7 @@ def is_video_adaptation(s: AdaptationSet) -> bool:
 
 def get_pssh(stream: Stream) -> str:
     if stream is None:
-        raise ValueError("")
+        raise ValueError("stream cannot be None")
 
     if not isinstance(stream, Stream):
         logger.warning(f"Invalid type for stream: Expected Stream, got {type(stream).__name__}")
