@@ -1,15 +1,12 @@
-import logging
-
 """
 The function for checking if a stream is video or audio are based on
 https://github.com/emarsden/dash-mpd-rs
 """
 
+import logging
 import shutil
-import sys
 import subprocess
-import os
-
+import sys
 from enum import Enum, auto
 from pathlib import Path
 from typing import Optional
@@ -21,7 +18,6 @@ from defaults import (
     DEFAULT_DECRYPTED_VIDEO_FILENAME,
     DEFAULT_MERGED_VIDEO_FILENAME,
 )
-
 from extractor import DecryptionKeys
 
 try:

@@ -148,7 +148,7 @@ def download_by_manifest_and_license_url(
 
         if to_download_manifest:
             download_file(manifest, "manifest.mpd")
-            logger.info(f"Saving manifest to manifest.mpd")
+            logger.info("Saving manifest to manifest.mpd")
 
         streams: list[Stream] = stream.get_streams(mpd)
 

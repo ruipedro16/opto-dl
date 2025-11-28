@@ -8,8 +8,6 @@ import os
 from collections import namedtuple
 from pathlib import Path
 
-from selenium.webdriver.ie.webdriver import WebDriver
-
 from defaults import DEFAULT_TIMEOUT
 
 try:
@@ -21,6 +19,7 @@ except ImportError:
 try:
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.ie.webdriver import WebDriver
 except ImportError:
     sys.stderr.write("Error: 'selenium' is not installed. Install it with: pip install selenium\n")
     sys.exit(1)
@@ -122,7 +121,7 @@ def get_manifest_and_license(
     license_url = None
 
     for attempt in range(1, max_retries + 1):
-        logger.info(f"Attempt %d/%d...", attempt, max_retries)
+        logger.info("Attempt %d/%d...", attempt, max_retries)
 
         try:
             # This populates the requests file
@@ -174,7 +173,7 @@ def get_manifest_and_license(
 def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]:
     for attempt in range(1, max_retries + 1):
         try:
-            logger.info(f"Attempt %d/%d to get decryption keys...", attempt, max_retries)
+            logger.info("Attempt %d/%d to get decryption keys...", attempt, max_retries)
             response = requests.post(
                 url="https://cdrm-project.com/api/decrypt",
                 headers={
