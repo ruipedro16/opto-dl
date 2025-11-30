@@ -356,7 +356,9 @@ def get_pssh(stream: Stream) -> str:
     return p
 
 
-def fix_audio(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None):
+def fix_audio(
+    decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None, verbose: bool = False
+):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
@@ -379,12 +381,14 @@ def fix_audio(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path]
 
     cmd += [str(encrypted_audio), str(decrypted_audio)]
 
-    logger.info(f'Command: {" ".join(cmd)}')
+    logger.info(f'Command (cwd: {working_dir}): {" ".join(cmd)}')
 
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    subprocess.run(cmd, capture_output=(not verbose), text=True, check=True)
 
 
-def fix_video(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None):
+def fix_video(
+    decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None, verbose: bool = False
+):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
         sys.exit(1)
@@ -407,11 +411,13 @@ def fix_video(decryption_keys: list[DecryptionKeys], working_dir: Optional[Path]
 
     cmd += [str(encrypted_video), str(decrypted_video)]
 
-    logger.info(f'Command: {" ".join(cmd)}')
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    logger.info(f'Command (cwd: {working_dir}): {" ".join(cmd)}')
+    subprocess.run(cmd, capture_output=(not verbose), text=True, check=True)
 
 
-def merge_streams(output_filename: Optional[str] = None, working_dir: Optional[Path] = None):
+def merge_streams(
+    output_filename: Optional[str] = None, working_dir: Optional[Path] = None, verbose: bool = False
+):
     if shutil.which("ffmpeg") is None:
         logger.fatal("ffmpeg is not installed or not found in PATH")
         sys.exit(1)
@@ -437,5 +443,5 @@ def merge_streams(output_filename: Optional[str] = None, working_dir: Optional[P
         "copy",
         output_filename,
     ]
-    logger.info(f'Command: {" ".join(cmd)}')
-    subprocess.run(cmd, capture_output=True, text=True, check=True)
+    logger.info(f'Command (cwd: {working_dir}): {" ".join(cmd)}')
+    subprocess.run(cmd, capture_output=(not verbose), text=True, check=True)

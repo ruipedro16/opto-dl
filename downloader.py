@@ -43,6 +43,7 @@ def download_by_file(
     to_download_manifest: bool = False,
     multithreading: bool = False,
     workers: int = DEFAULT_MAX_WORKERS,
+    verbose: bool = False,
 ):
     if filepath is None:
         raise ValueError("filepath cannot be None")
@@ -62,55 +63,76 @@ def download_by_file(
     urls: list[str] = get_urls(text)
     logger.info(f'URLs found: {"\n".join(urls)}')
 
-    if not multithreading:
-        counter = 1
-        for url in urls:
-            if not "opto.sic.pt" in url:
-                logger.warning(f"Skipping invalid URL: {url}")
-                continue
+    # Filter valid URLs
+    valid_urls: list[tuple[int, str]] = []  # list[(index, url)]
+    for i, url in enumerate(urls, start=1):
+        if not "opto.sic.pt" in url:
+            logger.warning(f"Skipping invalid URL: {url}")
+            continue
+        valid_urls.append((i, url))
 
+    if not valid_urls:
+        logger.warning("No valid URLs to download")
+        return
+
+    if not multithreading:
+        for counter, url in valid_urls:
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
             download_by_url(
                 url,
                 to_download_subtitles,
                 to_download_manifest,
                 f"file_{counter}.mp4",
+                verbose=verbose,
             )
-            counter += 1
     else:
-        # Filter valid URLs
-        valid_urls = []
-        for i, url in enumerate(urls, start=1):
-            if not "opto.sic.pt" in url:
-                logger.warning(f"Skipping invalid URL: {url}")
-                continue
-            valid_urls.append((i, url))
+        # Step 1: Sequentially collect manifests and license URLs
+        logger.info(f"Collecting manifests for {len(valid_urls)} URLs...")
+        manifest_data: list[tuple[int, str, str, str]] = []
+        for counter, url in valid_urls:
+            try:
+                logger.info(f"Getting manifest for {url} [{counter}/{len(valid_urls)}]")
+                manifest, license_url = extractor.get_manifest_and_license(url)
 
-        if not valid_urls:
-            logger.warning("No valid URLs to download")
+                if manifest and license_url:
+                    manifest_data.append((counter, url, manifest, license_url))
+                else:
+                    logger.error(f"Failed to get manifest for {url}")
+
+            except Exception as e:
+                logger.error(f"Failed to get manifest for {url}: {e}")
+
+        if not manifest_data:
+            logger.error("No valid manifests collected")
             return
 
-        def download_task(counter: int, url: str):
-            """Download a single URL with error handling"""
+        # Step 2: Download concurrently using manifests
+        def download_task(counter: int, url: str, manifest: str, license_url: str):
             try:
-                logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
-                download_by_url(
-                    url,
+                logger.info(f"Downloading {url} [{counter}/{len(valid_urls)}]")
+                download_by_manifest_and_license_url(
+                    manifest,
+                    license_url,
                     to_download_subtitles,
                     to_download_manifest,
+                    None,  # audio_stream_id (not specified when downloading by file)
+                    None,  # video_stream_id (not specified when downloading by file)
                     f"file_{counter}.mp4",
+                    verbose=verbose,
                 )
                 return counter, url, True, None
             except Exception as e:
                 logger.error(f"Failed to download {url}: {e}")
                 return counter, url, False, str(e)
 
-        logger.info(f"Starting parallel download of {len(valid_urls)} files with {workers} workers")
+        logger.info(
+            f"Starting parallel download of {len(manifest_data)} files with {workers} workers"
+        )
 
-        with ThreadPoolExecutor(max_workers=min(len(valid_urls), workers)) as executor:
+        with ThreadPoolExecutor(max_workers=min(len(manifest_data), workers)) as executor:
             futures = {
-                executor.submit(download_task, counter, url): (counter, url)
-                for counter, url in valid_urls
+                executor.submit(download_task, counter, url, manifest, license_url): (counter, url)
+                for counter, url, manifest, license_url in manifest_data
             }
 
             completed = 0
@@ -121,10 +143,12 @@ def download_by_file(
                 completed += 1
 
                 if success:
-                    logger.info(f"Completed download {completed}/{len(valid_urls)}: {url}")
+                    logger.info(f"Completed download {completed}/{len(manifest_data)}: {url}")
                 else:
                     failed += 1
-                    logger.error(f"Failed download {completed}/{len(valid_urls)}: {url} - {error}")
+                    logger.error(
+                        f"Failed download {completed}/{len(manifest_data)}: {url} - {error}"
+                    )
 
         logger.info(f"Download complete: {completed - failed} succeeded, {failed} failed")
         # TODO: FIXME: Implement retries for the failed downloads
@@ -137,6 +161,7 @@ def download_by_url(
     output_filename: Optional[str] = None,
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
+    verbose: bool = False,
 ):
     if url is None:
         raise ValueError("url cannot be None")
@@ -162,6 +187,7 @@ def download_by_url(
         audio_stream_id,
         video_stream_id,
         output_filename,
+        verbose=verbose,
     )
 
 
@@ -173,6 +199,7 @@ def download_by_manifest_and_license_url(
     audio_stream_id: Optional[str] = None,
     video_stream_id: Optional[str] = None,
     output_filename: Optional[str] = None,
+    verbose: bool = False,
 ):
     if manifest is None:
         raise ValueError("manifest cannot be None")
@@ -243,16 +270,18 @@ def download_by_manifest_and_license_url(
         if video_stream.stream_type != StreamType.VIDEO:
             logger.warning(f"Stream {video_stream.id} is not video")
 
-        download_stream(manifest, video_stream, working_dir)
-        download_stream(manifest, audio_stream, working_dir)
+        download_stream(manifest, video_stream, working_dir, verbose)
+        download_stream(manifest, audio_stream, working_dir, verbose)
         pssh = get_pssh(video_stream)
         decryption_keys = extractor.get_keys(pssh, license_url)
-        fix_video(decryption_keys, working_dir)
-        fix_audio(decryption_keys, working_dir)
-        merge_streams(output_filename, working_dir)
+        fix_video(decryption_keys, working_dir, verbose)
+        fix_audio(decryption_keys, working_dir, verbose)
+        merge_streams(output_filename, working_dir, verbose)
 
 
-def download_stream(manifest_url: str, stream: Stream, working_dir: Optional[Path] = None):
+def download_stream(
+    manifest_url: str, stream: Stream, working_dir: Optional[Path] = None, verbose: bool = False
+):
     if manifest_url is None:
         raise ValueError("manifest_url cannot be empty or None")
 
@@ -278,9 +307,11 @@ def download_stream(manifest_url: str, stream: Stream, working_dir: Optional[Pat
 
     command = ["yt-dlp", "-f", stream.id, "--allow-unplayable-formats", manifest_url]
 
-    logger.info(f'Command: {" ".join(command)}')
+    logger.info(f'Command (cwd: {working_dir}): {" ".join(command)}')
 
-    subprocess.run(command, capture_output=True, text=True, check=True, cwd=str(working_dir))
+    subprocess.run(
+        command, capture_output=(not verbose), text=True, check=True, cwd=str(working_dir)
+    )
 
 
 def download_subtitles(subtitle_stream: Stream, output_path: Optional[str] = None):

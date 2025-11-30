@@ -87,6 +87,7 @@ def parse_cli_args():
     )
 
     parser.add_argument(
+        "-c",
         "--concurrent",
         action="store_true",
         help="Enable concurrent downloads when using --file",
@@ -139,6 +140,7 @@ def run(args: argparse.Namespace):
                 args.store_manifest,
                 args.concurrent,
                 workers,
+                args.verbose,
             )
         elif args.url is not None:
             downloader.download_by_url(
@@ -148,6 +150,7 @@ def run(args: argparse.Namespace):
                 args.output,
                 args.audio_stream,
                 args.video_stream,
+                args.verbose,
             )
         if args.manifest is not None and args.license_url is not None:
             downloader.download_by_manifest_and_license_url(
@@ -158,6 +161,7 @@ def run(args: argparse.Namespace):
                 args.audio_stream,
                 args.video_stream,
                 args.output,
+                args.verbose,
             )
 
 
