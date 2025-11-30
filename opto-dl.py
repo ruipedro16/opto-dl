@@ -3,6 +3,7 @@
 
 import argparse
 import sys
+import os
 
 from pathlib import Path
 from mpegdash.parser import MPEGDASHParser
@@ -13,7 +14,7 @@ import pp
 import stream
 import utils
 
-from defaults import VIDEO_EXTENSIONS
+from defaults import VIDEO_EXTENSIONS, DEFAULT_MAX_WORKERS
 
 
 def parse_cli_args():
@@ -85,12 +86,22 @@ def parse_cli_args():
         help="Verbose output",
     )
 
+    parser.add_argument(
+        "--concurrent",
+        action="store_true",
+        help="Enable concurrent downloads when using --file",
+    )
+
+    parser.add_argument(
+        "--workers",
+        type=int,
+        help=f"Number of concurrent workers (default: $(nproc)/4 = {DEFAULT_MAX_WORKERS})",
+    )
+
     return parser.parse_args()
 
 
 def run(args: argparse.Namespace):
-    print(f"Args: {args}")
-
     if args.output:
         if (
             not args.output.endswith("/")  # is a directory
@@ -121,10 +132,13 @@ def run(args: argparse.Namespace):
         or (args.license_url is not None and args.manifest is not None)
     ):
         if args.file is not None:
+            workers = args.workers if args.workers else DEFAULT_MAX_WORKERS
             downloader.download_by_file(
                 args.file,
                 args.download_subtitles,
                 args.store_manifest,
+                args.concurrent,
+                workers,
             )
         elif args.url is not None:
             downloader.download_by_url(

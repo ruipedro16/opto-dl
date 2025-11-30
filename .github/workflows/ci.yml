@@ -1,4 +1,4 @@
-name: Pytype Check
+name: CI
 on:
   push:
     branches: ['**']
@@ -20,3 +20,6 @@ jobs:
       - name: Run Pytype
         run: |
           pytype --config pytype.toml
+      - name: Run Pylint
+        run: |
+          pylint --fail-under=9.0 *.py

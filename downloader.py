@@ -7,6 +7,7 @@ import tempfile
 
 from pathlib import Path
 from typing import Optional
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import extractor
 import stream
@@ -77,7 +78,56 @@ def download_by_file(
             )
             counter += 1
     else:
-        raise NotImplementedError("Multithreading not yet implemented")
+        # Filter valid URLs
+        valid_urls = []
+        for i, url in enumerate(urls, start=1):
+            if not "opto.sic.pt" in url:
+                logger.warning(f"Skipping invalid URL: {url}")
+                continue
+            valid_urls.append((i, url))
+
+        if not valid_urls:
+            logger.warning("No valid URLs to download")
+            return
+
+        def download_task(counter: int, url: str):
+            """Download a single URL with error handling"""
+            try:
+                logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
+                download_by_url(
+                    url,
+                    to_download_subtitles,
+                    to_download_manifest,
+                    f"file_{counter}.mp4",
+                )
+                return counter, url, True, None
+            except Exception as e:
+                logger.error(f"Failed to download {url}: {e}")
+                return counter, url, False, str(e)
+
+        logger.info(f"Starting parallel download of {len(valid_urls)} files with {workers} workers")
+
+        with ThreadPoolExecutor(max_workers=min(len(valid_urls), workers)) as executor:
+            futures = {
+                executor.submit(download_task, counter, url): (counter, url)
+                for counter, url in valid_urls
+            }
+
+            completed = 0
+            failed = 0
+
+            for future in as_completed(futures):
+                counter, url, success, error = future.result()
+                completed += 1
+
+                if success:
+                    logger.info(f"Completed download {completed}/{len(valid_urls)}: {url}")
+                else:
+                    failed += 1
+                    logger.error(f"Failed download {completed}/{len(valid_urls)}: {url} - {error}")
+
+        logger.info(f"Download complete: {completed - failed} succeeded, {failed} failed")
+        # TODO: FIXME: Implement retries for the failed downloads
 
 
 def download_by_url(

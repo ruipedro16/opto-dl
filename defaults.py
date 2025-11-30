@@ -1,5 +1,7 @@
+import os
+
 DEFAULT_TIMEOUT: int = 15
-DEFAULT_MAX_WORKERS: int = 5
+DEFAULT_MAX_WORKERS: int = max(1, os.cpu_count() // 4)
 DEFAULT_ENCRYPTED_AUDIO_FILENAME: str = "manifest [manifest].m4a"
 DEFAULT_DECRYPTED_AUDIO_FILENAME: str = "OK_audio.m4a"
 DEFAULT_ENCRYPTED_VIDEO_FILENAME: str = "manifest [manifest].mp4"

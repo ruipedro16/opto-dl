@@ -22,4 +22,5 @@ typing_extensions==4.15.0
 urllib3==2.5.0
 websocket-client==1.9.0
 wsproto==1.2.0
+pylint==4.0.3
 pytype==2024.10.11
