@@ -97,7 +97,7 @@ def download_by_file(
         # Step 2: Download concurrently using manifests
         def download_task(counter: int, url: str, manifest: str, license_url: str):
             try:
-                logger.info(f"Downloading {url} [{counter}/{len(valid_urls)}]")
+                logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
                 download_by_manifest_and_license_url(
                     manifest,
                     license_url,
