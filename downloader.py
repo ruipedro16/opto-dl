@@ -63,20 +63,8 @@ def download_by_file(
     urls: list[str] = get_urls(text)
     logger.info(f'URLs found: {"\n".join(urls)}')
 
-    # Filter valid URLs
-    valid_urls: list[tuple[int, str]] = []  # list[(index, url)]
-    for i, url in enumerate(urls, start=1):
-        if not "opto.sic.pt" in url:
-            logger.warning(f"Skipping invalid URL: {url}")
-            continue
-        valid_urls.append((i, url))
-
-    if not valid_urls:
-        logger.warning("No valid URLs to download")
-        return
-
     if not multithreading:
-        for counter, url in valid_urls:
+        for counter, url in urls:
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
             download_by_url(
                 url,
@@ -87,11 +75,11 @@ def download_by_file(
             )
     else:
         # Step 1: Sequentially collect manifests and license URLs
-        logger.info(f"Collecting manifests for {len(valid_urls)} URLs...")
+        logger.info(f"Collecting manifests for {len(urls)} URLs...")
         manifest_data: list[tuple[int, str, str, str]] = []
-        for counter, url in valid_urls:
+        for counter, url in urls:
             try:
-                logger.info(f"Getting manifest for {url} [{counter}/{len(valid_urls)}]")
+                logger.info(f"Getting manifest for {url} [{counter}/{len(urls)}]")
                 manifest, license_url = extractor.get_manifest_and_license(url)
 
                 if manifest and license_url:

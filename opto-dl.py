@@ -24,7 +24,7 @@ def parse_cli_args():
 
     parser.add_argument(
         "--url",
-        help="URL of the video (from https://opto.sic.pt/)",
+        help="URL of the video",
     )
 
     parser.add_argument(
