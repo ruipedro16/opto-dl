@@ -21,7 +21,7 @@ from defaults import (
 from extractor import DecryptionKeys
 
 try:
-    from mpegdash.nodes import AdaptationSet, Representation
+    from mpegdash.nodes import AdaptationSet, Representation, ContentProtection, MPEGDASH
 except ImportError:
     sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
@@ -44,6 +44,9 @@ class StreamType(Enum):
 
         return mapping.get(self, "unknown stream type")
 
+    def __repr__(self):
+        return self.name
+
 
 # A stream represents the same as a Representation
 class Stream:
@@ -56,7 +59,7 @@ class Stream:
         height: Optional[int],
         fps: Optional[int],
         subtitle_urls: list[str],
-        content_protections,
+        content_protections: list[ContentProtection],
     ):
         self.id: str = stream_id
         self.stream_type: StreamType = stream_type
@@ -73,7 +76,19 @@ class Stream:
         self.subtitle_urls: list[str] = subtitle_urls
 
         # for finding pssh
-        self.content_protections = content_protections
+        self.content_protections: list[ContentProtection] = content_protections
+
+    def __repr__(self):
+        return (
+            f"Stream(id={self.id!r}, "
+            f"stream_type={self.stream_type}, "
+            f"bandwidth={self.bandwidth}, "
+            f"width={self.width}, "
+            f"height={self.height}, "
+            f"fps={self.fps}, "
+            f"subtitle_urls={self.subtitle_urls!r}, "
+            f"content_protections={self.content_protections!r})"
+        )
 
     @staticmethod
     def from_representation(r: Representation, stream_type: StreamType):
@@ -231,7 +246,13 @@ def choose_best_audio(streams: list[Stream]) -> Stream:
     if not streams:
         raise ValueError("No streams provided")
 
-    # TODO: all elements should be of type stream
+    if not isinstance(streams, list):
+        logger.fatal("Invalid type for streams: Expected list, got %s", type(streams).__name__)
+        sys.exit(1)
+
+    if not all(isinstance(x, Stream) for x in streams):
+        logger.fatal("all items in streams list must be Stream instances")
+        sys.exit(1)
 
     # we have to filter for audio streams because video streams also have a bandwidth field
 
@@ -249,7 +270,13 @@ def choose_best_video(streams: list[Stream]) -> Stream:
     if not streams:
         raise ValueError(f"No streams provided: {streams}")
 
-    # TODO: all elements should be of type stream
+    if not isinstance(streams, list):
+        logger.fatal("Invalid type for streams: Expected list, got %s", type(streams).__name__)
+        sys.exit(1)
+
+    if not all(isinstance(x, Stream) for x in streams):
+        logger.fatal("all items in streams list must be Stream instances")
+        sys.exit(1)
 
     s = max(streams, key=lambda s: (s.width or 0) * (s.height or 0))
 
@@ -330,15 +357,57 @@ def is_video_adaptation(s: AdaptationSet) -> bool:
     return False
 
 
-def get_pssh(stream: Stream) -> str:
+def get_pssh(stream: Stream, manifest: MPEGDASH) -> tuple[str, bool]:
+    def get_pssh_dirty_fix_for_joyn() -> tuple[str, bool]:
+        import re
+        from mpegdash.parser import MPEGDASHParser
+        import tempfile
+
+        logger.info("Applying dirty fix for joyn.de to get PSSH")
+        mpd_content = ""
+
+        try:
+            parser = MPEGDASHParser()
+            with tempfile.NamedTemporaryFile(
+                mode="w+", suffix=".mpd", delete=True, encoding="utf-8"
+            ) as tmp:
+                parser.write(manifest, tmp.name)
+                # Seek back to beginning and read the content
+                tmp.seek(0)
+                mpd_content = tmp.read()
+
+        except Exception as e:
+            logger.warning(f"Failed to write MPD to temporary file using MPEGDASHParser: {e}")
+            return "", False
+
+        pattern = r"<cenc:pssh>(.*?)</cenc:pssh>"
+        matches = re.findall(pattern, mpd_content)
+        if matches:
+            pssh = matches[0]
+            logger.info(f"Found PSSH using dirty fix: {pssh}")
+            return pssh, True
+        else:
+            logger.warning("No PSSH found using dirty fix for joyn.de")
+            return "", True
+
     if stream is None:
         raise ValueError("stream cannot be None")
 
     if not isinstance(stream, Stream):
         logger.warning(f"Invalid type for stream: Expected Stream, got {type(stream).__name__}")
 
+    if stream.content_protections is None:
+        logger.fatal("No content protections found in stream")
+
+    content_protections = stream.content_protections or []
+
     # We only care about elements that have the field pssh
-    pssh_list = [p for p in stream.content_protections if p.pssh is not None]
+    pssh_list = [p for p in content_protections if p.pssh is not None]
+
+    if pssh_list == []:
+        logger.warning("No PSSH found in content protections")
+        logger.info("Trying dirty fix for joyn.de...")
+        return get_pssh_dirty_fix_for_joyn()
 
     if len(pssh_list) != 1:
         logger.fatal("Not implemented for len(pssh_list) != 1")
@@ -353,11 +422,14 @@ def get_pssh(stream: Stream) -> str:
     p = pssh[0].pssh
 
     logger.info(f"Found PSSH: {p}")
-    return p
+    return p, False
 
 
 def fix_audio(
-    decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None, verbose: bool = False
+    decryption_keys: list[DecryptionKeys],
+    working_dir: Optional[Path] = None,
+    verbose: bool = False,
+    is_joyn: bool = False,
 ):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
@@ -371,13 +443,18 @@ def fix_audio(
 
     if not encrypted_audio.exists():
         logger.fatal("Encrypted audio file does not exist")
+        logger.info(f"Files in {working_dir}: {list(working_dir.iterdir())}")
         sys.exit(1)
 
     logger.info("Decrypting audio stream")
 
     cmd = ["mp4decrypt"]
-    for key_id, key in decryption_keys:
-        cmd += ["--key", f"1:{key_id}:{key}"]
+    if is_joyn:
+        for key_id, key in decryption_keys:
+            cmd += ["--key", f"{key}:{key_id}"]
+    else:
+        for key_id, key in decryption_keys:
+            cmd += ["--key", f"1:{key_id}:{key}"]
 
     cmd += [str(encrypted_audio), str(decrypted_audio)]
 
@@ -387,7 +464,10 @@ def fix_audio(
 
 
 def fix_video(
-    decryption_keys: list[DecryptionKeys], working_dir: Optional[Path] = None, verbose: bool = False
+    decryption_keys: list[DecryptionKeys],
+    working_dir: Optional[Path] = None,
+    verbose: bool = False,
+    is_joyn: bool = False,
 ):
     if shutil.which("mp4decrypt") is None:
         logger.fatal("mp4decrypt is not installed or not found in PATH")
@@ -401,13 +481,18 @@ def fix_video(
 
     if not encrypted_video.exists():
         logger.fatal("Encrypted video file does not exist")
+        logger.info(f"Files in {working_dir}: {list(working_dir.iterdir())}")
         sys.exit(1)
 
     logger.info("Decrypting video stream")
 
     cmd = ["mp4decrypt"]
-    for key_id, key in decryption_keys:
-        cmd += ["--key", f"1:{key_id}:{key}"]
+    if is_joyn:
+        for key_id, key in decryption_keys:
+            cmd += ["--key", f"{key}:{key_id}"]
+    else:
+        for key_id, key in decryption_keys:
+            cmd += ["--key", f"1:{key_id}:{key}"]
 
     cmd += [str(encrypted_video), str(decrypted_video)]
 

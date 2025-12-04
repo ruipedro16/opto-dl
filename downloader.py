@@ -11,7 +11,11 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import extractor
 import stream
-from defaults import DEFAULT_MAX_WORKERS
+from defaults import (
+    DEFAULT_MAX_WORKERS,
+    DEFAULT_ENCRYPTED_VIDEO_FILENAME,
+    DEFAULT_ENCRYPTED_AUDIO_FILENAME,
+)
 
 from stream import (
     get_pssh,
@@ -64,7 +68,7 @@ def download_by_file(
     logger.info(f'URLs found: {"\n".join(urls)}')
 
     if not multithreading:
-        for counter, url in urls:
+        for counter, url in enumerate(urls, start=1):
             logger.info(f"Downloading {url} [{counter}/{len(urls)}]")
             download_by_url(
                 url,
@@ -77,7 +81,7 @@ def download_by_file(
         # Step 1: Sequentially collect manifests and license URLs
         logger.info(f"Collecting manifests for {len(urls)} URLs...")
         manifest_data: list[tuple[int, str, str, str]] = []
-        for counter, url in urls:
+        for counter, url in enumerate(urls, start=1):
             try:
                 logger.info(f"Getting manifest for {url} [{counter}/{len(urls)}]")
                 manifest, license_url = extractor.get_manifest_and_license(url)
@@ -258,12 +262,12 @@ def download_by_manifest_and_license_url(
         if video_stream.stream_type != StreamType.VIDEO:
             logger.warning(f"Stream {video_stream.id} is not video")
 
+        pssh, is_joyn = get_pssh(video_stream, mpd)
         download_stream(manifest, video_stream, working_dir, verbose)
         download_stream(manifest, audio_stream, working_dir, verbose)
-        pssh = get_pssh(video_stream)
         decryption_keys = extractor.get_keys(pssh, license_url)
-        fix_video(decryption_keys, working_dir, verbose)
-        fix_audio(decryption_keys, working_dir, verbose)
+        fix_video(decryption_keys, working_dir, verbose, is_joyn)
+        fix_audio(decryption_keys, working_dir, verbose, is_joyn)
         merge_streams(output_filename, working_dir, verbose)
 
 
@@ -293,7 +297,21 @@ def download_stream(
 
     logger.info(f"Downloading encrypted {str(stream.stream_type)} stream: {stream.id}")
 
-    command = ["yt-dlp", "-f", stream.id, "--allow-unplayable-formats", manifest_url]
+    filename: str = (
+        DEFAULT_ENCRYPTED_VIDEO_FILENAME
+        if stream.stream_type == StreamType.VIDEO
+        else DEFAULT_ENCRYPTED_AUDIO_FILENAME if stream.stream_type == StreamType.AUDIO else "zzzz"
+    )
+
+    command = [
+        "yt-dlp",
+        "-f",
+        stream.id,
+        "--allow-unplayable-formats",
+        "-o",
+        str(working_dir / filename),
+        manifest_url,
+    ]
 
     logger.info(f'Command (cwd: {working_dir}): {" ".join(command)}')
 
