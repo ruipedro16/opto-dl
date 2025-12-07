@@ -174,6 +174,7 @@ def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]
     for attempt in range(1, max_retries + 1):
         try:
             logger.info("Attempt %d/%d to get decryption keys...", attempt, max_retries)
+            timeout = 5 * attempt  # Increase timeout with each retry
             response = requests.post(
                 url="https://cdrm-project.com/api/decrypt",
                 headers={
@@ -193,7 +194,7 @@ def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]
                         }
                     ),
                 },
-                timeout=5,
+                timeout=timeout,
             )
 
             response.raise_for_status()
