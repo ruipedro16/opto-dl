@@ -170,7 +170,7 @@ def get_manifest_and_license(
     return manifest_url, license_url
 
 
-def get_keys(pssh: str, license_url: str, max_retries=3) -> list[DecryptionKeys]:
+def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]:
     for attempt in range(1, max_retries + 1):
         try:
             logger.info("Attempt %d/%d to get decryption keys...", attempt, max_retries)
