@@ -54,6 +54,6 @@ def pp_streams(streams: list[Stream]):
         elif stream.stream_type == StreamType.SUBTITLES:
             table.add_row(stream.id, str(stream.stream_type), "--", "--", "--")
         else:
-            pass
+            logger.warning(f"Unknown stream type: {stream.stream_type}")
 
     console.print(table)
