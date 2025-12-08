@@ -95,7 +95,7 @@ def check_health(
                 f"Checking health of {url} (attempt {attempt + 1}/{max_retries + 1}, timeout={current_timeout:.1f}s)"
             )
 
-            response = requests.head(url, timeout=current_timeout, allow_redirects=True)
+            response = requests.get(url, timeout=current_timeout, allow_redirects=True)
             response.raise_for_status()
 
             logger.info(f"Successfully checked {url} - Status: {response.status_code}")

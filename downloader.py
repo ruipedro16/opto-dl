@@ -211,9 +211,11 @@ def download_by_manifest_and_license_url(
         )
         sys.exit(1)
 
+    mpd = MPEGDASHParser.parse(manifest)
+
     # check if the API to get the keys is down
     # if there is no pssh, we dont need the api
-    if extractor.has_pssh(manifest) and not check_health(KEYS_URL):
+    if extractor.has_pssh(mpd) and not check_health(KEYS_URL):
         sys.stderr.write(
             f"Error: Unable to reach {KEYS_URL}. The service may be down or unreachable.\n"
         )
@@ -222,8 +224,6 @@ def download_by_manifest_and_license_url(
     with tempfile.TemporaryDirectory(prefix="opto-dl-") as temp_dir:
         working_dir = Path(temp_dir)
         logger.info(f"Using temporary directory: {working_dir}")
-
-        mpd = MPEGDASHParser.parse(manifest)
 
         if to_download_manifest:
             download_file(manifest, "manifest.mpd")
