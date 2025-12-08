@@ -212,6 +212,7 @@ def download_by_manifest_and_license_url(
         sys.exit(1)
 
     # check if the API to get the keys is down
+    # if there is no pssh, we dont need the api
     if extractor.has_pssh(manifest) and not check_health(KEYS_URL):
         sys.stderr.write(
             f"Error: Unable to reach {KEYS_URL}. The service may be down or unreachable.\n"
