@@ -73,3 +73,43 @@ def download_file(
                 return False
 
     return False
+
+
+def check_health(
+    url: str,
+    max_retries: int = 3,
+    initial_delay: float = 1.0,
+    backoff_factor: float = 2.0,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> bool:
+    if not isinstance(url, str):
+        raise TypeError(f"url must be str, got {type(url).__name__}")
+
+    if url is None:
+        raise ValueError("url cannot be None")
+
+    for attempt in range(max_retries + 1):
+        try:
+            current_timeout = timeout * (backoff_factor**attempt)
+            logger.info(
+                f"Checking health of {url} (attempt {attempt + 1}/{max_retries + 1}, timeout={current_timeout:.1f}s)"
+            )
+
+            response = requests.head(url, timeout=current_timeout, allow_redirects=True)
+            response.raise_for_status()
+
+            logger.info(f"Successfully checked {url} - Status: {response.status_code}")
+            return True
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Attempt {attempt + 1} failed: {e}")
+
+            if attempt < max_retries:
+                delay = initial_delay * (backoff_factor**attempt)
+                logger.info(f"Retrying in {delay:.1f} seconds...")
+                time.sleep(delay)
+            else:
+                logger.error(f"Failed to check {url} after {max_retries + 1} attempts")
+                return False
+
+    return False

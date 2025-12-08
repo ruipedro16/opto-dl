@@ -4,6 +4,7 @@ import re
 import time
 import json
 import os
+import tempfile
 
 from collections import namedtuple
 from pathlib import Path
@@ -22,6 +23,13 @@ try:
     from selenium.webdriver.ie.webdriver import WebDriver
 except ImportError:
     sys.stderr.write("Error: 'selenium' is not installed. Install it with: pip install selenium\n")
+    sys.exit(1)
+
+try:
+    from mpegdash.nodes import MPEGDASH
+    from mpegdash.parser import MPEGDASHParser
+except ImportError:
+    sys.stderr.write("Error: mpegdash module not found. Install it with: pip install mpegdash\n")
     sys.exit(1)
 
 # File to where the requests are logged
@@ -226,3 +234,31 @@ def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]
 
     logger.fatal("Failed to get decryption keys after multiple retries.")
     sys.exit(1)
+
+
+def has_pssh(manifest: MPEGDASH) -> bool:
+    if manifest is None:
+        raise ValueError("manifest cannot be None")
+
+    if not isinstance(manifest, MPEGDASH):
+        raise TypeError(f"manifest must be MPEGDASH, got {type(manifest).__name__}")
+
+    mpd_content: str = ""
+
+    try:
+        parser = MPEGDASHParser()
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".mpd", delete=True, encoding="utf-8"
+        ) as tmp:
+            parser.write(manifest, tmp.name)
+            tmp.seek(0)  # go back to the beginning of the file
+            mpd_content = tmp.read()
+
+    except Exception as e:
+        logger.warning(f"Failed to write MPD to temporary file using MPEGDASHParser: {e}")
+        return False
+
+    assert mpd_content, "MPD content should not be empty at this point"
+
+    pattern = r"<cenc:pssh>(.*?)</cenc:pssh>"
+    return bool(re.search(pattern, mpd_content))

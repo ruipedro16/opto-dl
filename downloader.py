@@ -15,6 +15,7 @@ from defaults import (
     DEFAULT_MAX_WORKERS,
     DEFAULT_ENCRYPTED_VIDEO_FILENAME,
     DEFAULT_ENCRYPTED_AUDIO_FILENAME,
+    KEYS_URL,
 )
 
 from stream import (
@@ -28,7 +29,8 @@ from stream import (
     StreamType,
     choose_best_audio,
 )
-from utils import get_urls, download_file
+
+from utils import get_urls, download_file, check_health
 
 
 try:
@@ -206,6 +208,13 @@ def download_by_manifest_and_license_url(
     if not isinstance(license_url, str):
         logger.fatal(
             f"Invalid type for license_url: Expected str, got {type(license_url).__name__}"
+        )
+        sys.exit(1)
+
+    # check if the API to get the keys is down
+    if extractor.has_pssh(manifest) and not check_health(KEYS_URL):
+        sys.stderr.write(
+            f"Error: Unable to reach {KEYS_URL}. The service may be down or unreachable.\n"
         )
         sys.exit(1)
 
