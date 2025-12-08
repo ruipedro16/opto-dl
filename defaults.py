@@ -8,3 +8,5 @@ DEFAULT_ENCRYPTED_VIDEO_FILENAME: str = "ENCRYPTED_video.mp4"
 DEFAULT_DECRYPTED_VIDEO_FILENAME: str = "OK_video.mp4"
 DEFAULT_MERGED_VIDEO_FILENAME: str = "Ficheiro_Final.mp4"
 VIDEO_EXTENSIONS: list[str] = [".mp4", ".mkv"]  # TODO: add more if needed
+
+KEYS_URL: str = "https://cdrm-project.com"
