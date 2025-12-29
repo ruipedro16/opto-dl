@@ -2,5 +2,7 @@
 .idea
 __pycache__
 
-*.mp4
 scripts/*.py
+
+data/
+*.mp4
