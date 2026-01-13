@@ -14,7 +14,7 @@ if __name__ == "__main__":
 
         run(
             [
-                "./opto-dl,py",
+                "./opto-dl.py",
                 "-v",
                 "--url",
                 url,
