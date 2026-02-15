@@ -8,6 +8,7 @@ import psutil
 import tempfile
 import logging
 
+from pathlib import Path
 from typing import Optional
 from subprocess import run, Popen
 from psutil import Process
@@ -71,10 +72,12 @@ def kill_process(pid: int) -> None:
 
 
 if __name__ == "__main__":
-    VERBOSE = True
     urls: list[str] = sys.argv[1:]
 
     vpn_pid: Optional[int] = setup_vpn() if len(urls) > 0 else None
+
+    # create data directory if it doesn't exist
+    (Path(__file__).resolve().parent / "data").mkdir(exist_ok=True)
 
     try:
         for url in urls:
