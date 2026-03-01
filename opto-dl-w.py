@@ -72,6 +72,7 @@ def kill_process(pid: int) -> None:
 
 
 if __name__ == "__main__":
+
     urls: list[str] = sys.argv[1:]
 
     vpn_pid: Optional[int] = setup_vpn() if len(urls) > 0 else None
@@ -82,18 +83,39 @@ if __name__ == "__main__":
     try:
         for url in urls:
 
-            fields = [f for f in url.replace("https://", "").replace("http://", "").split("/") if f]
+            fields: list[str] = [
+                f for f in url.replace("https://", "").replace("http://", "").split("/") if f
+            ]
 
-            run(
-                [
-                    "./opto-dl.py",
-                    "-v",
-                    "--url",
-                    url,
-                    "-o",
-                    f"data/{fields[2]}.mp4",
-                ]
-            )
+            print(fields)
+
+            if "opto.sic.pt" in fields:
+                run(
+                    [
+                        "./opto-dl.py",
+                        "-v",
+                        "--url",
+                        url,
+                        "-o",
+                        f"data/{fields[2]}.mp4",
+                    ]
+                )
+            elif "www.rtp.pt" in fields:
+                run(
+                    [
+                        "./third-party/yt-dlp-rtp-support",
+                        "-P",
+                        "data/",
+                        "-o",
+                        '"%(title)s.%(ext)s"',
+                        url,
+                    ],
+                    cwd=Path(__file__).resolve().parent,
+                )
+            else:
+                sys.stderr.write("Unrecognized URL format: " + url + "\n")
+                sys.exit(1)
+
     finally:
         if vpn_pid is not None:
             logger.info(f"Killing VPN process (PID: {vpn_pid})")
