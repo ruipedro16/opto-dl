@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 from subprocess import run, Popen
 from psutil import Process
+from argparse import ArgumentParser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,9 +72,33 @@ def kill_process(pid: int) -> None:
     p.kill
 
 
-if __name__ == "__main__":
+def parse_args() -> ArgumentParser:
+    parser = ArgumentParser(description="")
+    parser.add_argument("urls", nargs="+", type=str, help="URLs to download", default=[])
+    parser.add_argument(
+        "-f", "--file", required=False, help="File containing URLs to download (one per line)"
+    )
+    return parser.parse_args()
 
-    urls: list[str] = sys.argv[1:]
+
+if __name__ == "__main__":
+    args = parse_args()
+
+    urls: list[str] = []
+
+    if args.file:
+        file_path = Path(args.file)
+
+        if not file_path.is_file():
+            sys.stderr.write(f"Error: File does not exist: {args.file}\n")
+            sys.exit(1)
+
+        with open(args.file, "r", encoding="utf-8") as f:
+            urls.extend([line.strip() for line in f.readlines() if line.strip()])
+
+    urls.extend(args.urls)
+
+    logger.info(f"URLs to download: {urls}")
 
     vpn_pid: Optional[int] = setup_vpn() if len(urls) > 0 else None
 
