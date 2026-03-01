@@ -8,4 +8,5 @@
 your_username ALL=(ALL) NOPASSWD: /usr/sbin/openvpn
 ```
 
-**NOTE**: Also works for [joyn.de](https://www.joyn.de/)
+**NOTE**: Also works for [RTP Play](https://www.rtp.pt/play/) and
+[joyn.de](https://www.joyn.de/)

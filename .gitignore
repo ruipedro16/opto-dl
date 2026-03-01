@@ -6,3 +6,4 @@ scripts/*.py
 
 data/
 *.mp4
+*.txt

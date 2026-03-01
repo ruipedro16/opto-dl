@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Optional
 from subprocess import run, Popen
 from psutil import Process
+from argparse import ArgumentParser
 
 logging.basicConfig(
     level=logging.INFO,
@@ -71,8 +72,33 @@ def kill_process(pid: int) -> None:
     p.kill
 
 
+def parse_args() -> ArgumentParser:
+    parser = ArgumentParser(description="")
+    parser.add_argument("urls", nargs="+", type=str, help="URLs to download", default=[])
+    parser.add_argument(
+        "-f", "--file", required=False, help="File containing URLs to download (one per line)"
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    urls: list[str] = sys.argv[1:]
+    args = parse_args()
+
+    urls: list[str] = []
+
+    if args.file:
+        file_path = Path(args.file)
+
+        if not file_path.is_file():
+            sys.stderr.write(f"Error: File does not exist: {args.file}\n")
+            sys.exit(1)
+
+        with open(args.file, "r", encoding="utf-8") as f:
+            urls.extend([line.strip() for line in f.readlines() if line.strip()])
+
+    urls.extend(args.urls)
+
+    logger.info(f"URLs to download: {urls}")
 
     vpn_pid: Optional[int] = setup_vpn() if len(urls) > 0 else None
 
@@ -82,18 +108,37 @@ if __name__ == "__main__":
     try:
         for url in urls:
 
-            fields = [f for f in url.replace("https://", "").replace("http://", "").split("/") if f]
+            fields: list[str] = [
+                f for f in url.replace("https://", "").replace("http://", "").split("/") if f
+            ]
 
-            run(
-                [
-                    "./opto-dl.py",
-                    "-v",
-                    "--url",
-                    url,
-                    "-o",
-                    f"data/{fields[2]}.mp4",
-                ]
-            )
+            if "opto.sic.pt" in fields:
+                run(
+                    [
+                        "./opto-dl.py",
+                        "-v",
+                        "--url",
+                        url,
+                        "-o",
+                        f"data/{fields[2]}.mp4",
+                    ],
+                    cwd=Path(__file__).resolve().parent,
+                )
+            elif "www.rtp.pt" in fields:
+                run(
+                    [
+                        "./third-party/yt-dlp-rtp-support",
+                        "-P",
+                        "data/",
+                        url,
+                    ],
+                    cwd=Path(__file__).resolve().parent,
+                )
+            # TODO: Support joyn.de
+            else:
+                sys.stderr.write("Unrecognized URL format: " + url + "\n")
+                sys.exit(1)
+
     finally:
         if vpn_pid is not None:
             logger.info(f"Killing VPN process (PID: {vpn_pid})")
