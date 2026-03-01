@@ -74,7 +74,7 @@ def kill_process(pid: int) -> None:
 
 def parse_args() -> ArgumentParser:
     parser = ArgumentParser(description="")
-    parser.add_argument("urls", nargs="+", type=str, help="URLs to download", default=[])
+    parser.add_argument("urls", nargs="*", type=str, help="URLs to download", default=[])
     parser.add_argument(
         "-f", "--file", required=False, help="File containing URLs to download (one per line)"
     )
