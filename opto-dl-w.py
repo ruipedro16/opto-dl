@@ -105,8 +105,6 @@ if __name__ == "__main__":
                         "./third-party/yt-dlp-rtp-support",
                         "-P",
                         "data/",
-                        "-o",
-                        '"%(title)s.%(ext)s"',
                         url,
                     ],
                     cwd=Path(__file__).resolve().parent,
