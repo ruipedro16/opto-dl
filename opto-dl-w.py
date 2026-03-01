@@ -87,8 +87,6 @@ if __name__ == "__main__":
                 f for f in url.replace("https://", "").replace("http://", "").split("/") if f
             ]
 
-            print(fields)
-
             if "opto.sic.pt" in fields:
                 run(
                     [
@@ -98,7 +96,8 @@ if __name__ == "__main__":
                         url,
                         "-o",
                         f"data/{fields[2]}.mp4",
-                    ]
+                    ],
+                    cwd=Path(__file__).resolve().parent,
                 )
             elif "www.rtp.pt" in fields:
                 run(
@@ -112,6 +111,7 @@ if __name__ == "__main__":
                     ],
                     cwd=Path(__file__).resolve().parent,
                 )
+            # TODO: Support joyn.de
             else:
                 sys.stderr.write("Unrecognized URL format: " + url + "\n")
                 sys.exit(1)
