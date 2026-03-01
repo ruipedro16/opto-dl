@@ -54,6 +54,9 @@ RUN wget https://www.bok.net/Bento4/binaries/Bento4-SDK-1-6-0-641.x86_64-unknown
 
 RUN python3 -m pip install -U "yt-dlp[default]" requests
 
+RUN wget -q -O /usr/local/bin/yt-dlp-rtp-support https://cld.pt/dl/download/518a5134-5c40-4c40-aed7-08d3beb8b2d1/yt-dlp-rtp-support_linux \
+    && chmod +x /usr/local/bin/yt-dlp-rtp-support
+
 WORKDIR /app
 
 COPY requirements.txt .
