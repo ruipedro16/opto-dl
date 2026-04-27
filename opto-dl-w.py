@@ -81,7 +81,7 @@ def parse_args() -> ArgumentParser:
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main() -> None:
     args = parse_args()
 
     urls: list[str] = []
@@ -134,7 +134,6 @@ if __name__ == "__main__":
                     ],
                     cwd=Path(__file__).resolve().parent,
                 )
-            # TODO: Support joyn.de
             else:
                 sys.stderr.write("Unrecognized URL format: " + url + "\n")
                 sys.exit(1)
@@ -143,3 +142,11 @@ if __name__ == "__main__":
         if vpn_pid is not None:
             logger.info(f"Killing VPN process (PID: {vpn_pid})")
             kill_process(vpn_pid)
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user, exiting...")
+        sys.exit(0)
