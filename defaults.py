@@ -11,4 +11,4 @@ VIDEO_EXTENSIONS: list[str] = [".mp4", ".mkv"]  # TODO: add more if needed
 
 KEYS_URL: str = "https://cdrm-project.com/"  # TODO: Delete
 
-API_TOKEN: str = ""  # TODO: ADD API TOKEN HERE
+API_TOKEN: str = os.getenv("API_TOKEN", None)
