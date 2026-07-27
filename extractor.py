@@ -211,6 +211,7 @@ def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]
 
     else:
         print(f"[{d['error_code']}] {d['hint']}")
+        return []
 
 
 def has_pssh(manifest: MPEGDASH) -> bool:
