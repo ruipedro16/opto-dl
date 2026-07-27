@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 
 DEFAULT_TIMEOUT: int = 15
@@ -11,4 +12,4 @@ VIDEO_EXTENSIONS: list[str] = [".mp4", ".mkv"]  # TODO: add more if needed
 
 KEYS_URL: str = "https://cdrm-project.com/"  # TODO: Delete
 
-API_TOKEN: str = os.getenv("API_TOKEN", None)
+API_TOKEN: Optional[str] = os.getenv("API_TOKEN", None)
