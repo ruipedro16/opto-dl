@@ -9,7 +9,7 @@ import tempfile
 from collections import namedtuple
 from pathlib import Path
 
-from defaults import DEFAULT_TIMEOUT
+from defaults import API_TOKEN, DEFAULT_TIMEOUT
 
 try:
     import requests
@@ -179,61 +179,38 @@ def get_manifest_and_license(
 
 
 def get_keys(pssh: str, license_url: str, max_retries=5) -> list[DecryptionKeys]:
-    for attempt in range(1, max_retries + 1):
-        try:
-            logger.info("Attempt %d/%d to get decryption keys...", attempt, max_retries)
-            timeout = 5 * attempt  # Increase timeout with each retry
-            response = requests.post(
-                url="https://cdrm-project.com/api/decrypt",
-                headers={
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "pssh": pssh,
-                    "licurl": license_url,
-                    "headers": str(
-                        {
-                            "User-Agent": (
-                                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) "
-                                "Gecko/20100101 Firefox/134.0"
-                            ),
-                            "Accept": "*/*",
-                            "Accept-Language": "en-US,en;q=0.7",
-                        }
-                    ),
-                },
-                timeout=timeout,
-            )
+    r = requests.post(
+        "https://cdmpool.xyz/api/extract",
+        json={
+            "token": API_TOKEN,
+            "drm": "widevine",
+            "pssh": pssh,
+            "license_url": license_url,
+            "headers": {
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36",
+                "Referer": "https://opto.sic.pt/",
+            },
+        },
+    )
 
-            response.raise_for_status()
+    d = r.json()
 
-            text: str = response.json()["message"]
+    if d["ok"]:
+        text: dict[str, str] = d["keys"][
+            0
+        ]  # TODO: FIX the [0] later : Also, this should not be called text
+        import pprint
 
-            r: list[DecryptionKeys] = []
-            for line in text.splitlines():
-                try:
-                    key_id, key = line.split(":")
-                    r.append(DecryptionKeys(key, key_id))
-                    logger.info(f"Found Key: {key} ; KeyID: {key_id}")
-                except ValueError as e:
-                    logger.error(f"Invalid line during key parsing: {line} => {e}")
-                    continue
-            return r
-        except requests.exceptions.RequestException as e:
-            logger.warning(f"Network or HTTP error during attempt {attempt}: {e}")
-            time.sleep(2**attempt)  # Exponential backoff
-        except json.JSONDecodeError as e:
-            logger.warning(f"JSON decoding error during attempt {attempt}: {e}")
-            time.sleep(2**attempt)
-        except KeyError as e:
-            logger.warning(f"Key error in response during attempt {attempt}: {e}")
-            time.sleep(2**attempt)
-        except Exception as e:
-            logger.warning(f"Unexpected error during attempt {attempt}: {e}")
-            time.sleep(2**attempt)
+        pprint.pprint(text)
+        r: list[DecryptionKeys] = []
+        key = text.get("key", None)
+        key_id = text.get("kid", None)
+        r.append(DecryptionKeys(key, key_id))
+        logger.info(f"Found Key: {key} ; KeyID: {key_id}")
+        return r
 
-    logger.fatal("Failed to get decryption keys after multiple retries.")
-    sys.exit(1)
+    else:
+        print(f"[{d['error_code']}] {d['hint']}")
 
 
 def has_pssh(manifest: MPEGDASH) -> bool:
