@@ -1,5 +1,8 @@
 FROM python:3.13-slim-bookworm
 
+# Add API token as an environment variable
+ENV API_TOKEN=""
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
